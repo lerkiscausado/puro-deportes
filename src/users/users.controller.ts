@@ -4,6 +4,9 @@ import { UsersService } from './users.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { LoginUserDto } from './dto/login-user.dto';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
+import { RolesGuard } from './guards/roles.guard';
+import { Roles } from './decorators/roles.decorator';
+import { Role } from './enums/role.enum';
 
 /**
  * Controlador de usuarios.
@@ -52,16 +55,48 @@ export class UsersController {
    * Requiere autenticación mediante token JWT en el header:
    * Authorization: Bearer <token>
    *
-   * El JwtAuthGuard valida el token y adjunta el payload al request.
-   * Luego se extrae el ID del usuario (sub) para buscar su perfil.
+   * Accesible por cualquier usuario autenticado (admin, manager, user).
    *
    * @param req - Objeto request con el payload del JWT adjuntado por el guard
    * @returns Los datos del usuario autenticado sin el campo password
    */
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(Role.ADMIN, Role.MANAGER, Role.USER)
   @Get('profile')
   async getProfile(@Req() req: Request) {
     // req['user'].sub contiene el ID del usuario extraído del token JWT
     return this.usersService.findById(req['user'].sub);
+  }
+
+  /**
+   * Endpoint exclusivo para administradores.
+   * Ruta: GET /users/admin/dashboard
+   *
+   * Solo accesible por usuarios con rol 'admin'.
+   * Requiere autenticación JWT y verificación de rol.
+   *
+   * @returns Mensaje de confirmación de acceso al panel de administración
+   */
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(Role.ADMIN)
+  @Get('admin/dashboard')
+  async adminDashboard() {
+    return { message: 'Bienvenido al panel de administración' };
+  }
+
+  /**
+   * Endpoint para administradores y managers.
+   * Ruta: GET /users/management
+   *
+   * Accesible por usuarios con rol 'admin' o 'manager'.
+   * Requiere autenticación JWT y verificación de rol.
+   *
+   * @returns Mensaje de confirmación de acceso al panel de gestión
+   */
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(Role.ADMIN, Role.MANAGER)
+  @Get('management')
+  async management() {
+    return { message: 'Bienvenido al panel de gestión' };
   }
 }

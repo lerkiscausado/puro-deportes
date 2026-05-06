@@ -4,7 +4,10 @@ import {
   Column,
   CreateDateColumn,
   UpdateDateColumn,
+  OneToMany,
 } from 'typeorm';
+import { Role } from './enums/role.enum';
+import { Torneo } from '../torneos/torneo.entity';
 
 /**
  * Entidad User - Representa la tabla 'users' en la base de datos.
@@ -32,6 +35,14 @@ export class User {
   @Column()
   name: string;
 
+  /**
+   * Rol del usuario en la plataforma.
+   * Valores posibles: 'admin', 'manager', 'user'.
+   * Por defecto se asigna 'user' al registrarse.
+   */
+  @Column({ type: 'enum', enum: Role, default: Role.USER })
+  role: Role;
+
   /** Fecha de creación del registro (generada automáticamente por TypeORM) */
   @CreateDateColumn()
   createdAt: Date;
@@ -39,4 +50,11 @@ export class User {
   /** Fecha de última actualización del registro (actualizada automáticamente por TypeORM) */
   @UpdateDateColumn()
   updatedAt: Date;
+
+  /**
+   * Relación OneToMany con la entidad Torneo.
+   * Un usuario puede crear/administrar múltiples torneos.
+   */
+  @OneToMany(() => Torneo, (torneo) => torneo.user)
+  torneos: Torneo[];
 }

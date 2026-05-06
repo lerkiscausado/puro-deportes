@@ -96,8 +96,8 @@ export class UsersService {
       throw new UnauthorizedException('Credenciales inválidas');
     }
 
-    // Genera el payload del token con los datos básicos del usuario
-    const payload = { sub: user.id, email: user.email, name: user.name };
+    // Genera el payload del token con los datos básicos del usuario (incluye el rol)
+    const payload = { sub: user.id, email: user.email, name: user.name, role: user.role };
 
     // Desestructura para excluir la contraseña de la respuesta
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
