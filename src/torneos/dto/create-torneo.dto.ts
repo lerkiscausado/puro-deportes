@@ -1,7 +1,13 @@
-import { IsDateString, IsEnum, IsNotEmpty, IsString } from 'class-validator';
+import {
+  IsDateString,
+  IsEnum,
+  IsNotEmpty,
+  IsString,
+  IsInt,
+} from 'class-validator';
+import { Type } from 'class-transformer';
 import { Deporte } from '../enums/deporte.enum';
 import { Rama } from '../enums/rama.enum';
-import { EstadoTorneo } from '../enums/estado-torneo.enum';
 
 /**
  * DTO para la creación de un nuevo torneo.
@@ -27,7 +33,8 @@ export class CreateTorneoDto {
 
   /** Tipo de deporte - debe ser uno de los valores del enum Deporte */
   @IsEnum(Deporte, {
-    message: 'El deporte debe ser: Baloncesto, Voleibol, Futbol, Microfutbol o Golito',
+    message:
+      'El deporte debe ser: Baloncesto, Voleibol, Futbol, Microfutbol o Golito',
   })
   deporte: Deporte;
 
@@ -37,9 +44,9 @@ export class CreateTorneoDto {
   })
   rama: Rama;
 
-  /** Estado del torneo - debe ser uno de los valores del enum EstadoTorneo (opcional, por defecto: Inscripciones) */
-  @IsEnum(EstadoTorneo, {
-    message: 'El estado debe ser: Inscripciones, En Juego, Finalizado o Suspendido',
-  })
-  estado?: EstadoTorneo;
+  /** ID del escenario por defecto para el torneo */
+  @Type(() => Number)
+  @IsInt({ message: 'El ID del escenario debe ser un número entero.' })
+  @IsNotEmpty({ message: 'El ID del escenario es requerido.' })
+  idEscenario: number;
 }

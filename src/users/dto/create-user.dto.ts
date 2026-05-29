@@ -1,4 +1,14 @@
-import { IsEmail, IsNotEmpty, IsString, MinLength } from 'class-validator';
+import { Type } from 'class-transformer';
+import {
+  IsDate,
+  IsEmail,
+  IsEnum,
+  IsNotEmpty,
+  IsOptional,
+  IsString,
+  MinLength,
+} from 'class-validator';
+import { Genero } from '../enums/genero.enum';
 
 /**
  * DTO para la creación de un nuevo usuario.
@@ -24,4 +34,21 @@ export class CreateUserDto {
   @IsString()
   @IsNotEmpty()
   name: string;
+
+  /** Género - valores permitidos: Hombre, Mujer (opcional) */
+  @IsOptional()
+  @IsEnum(Genero)
+  genero?: Genero;
+
+  /** Fecha de nacimiento en formato ISO (ej: 1990-05-15) (opcional) */
+  @IsOptional()
+  @Type(() => Date)
+  @IsDate()
+  fechaNacimiento?: Date;
+
+  /** Dirección del usuario (opcional) */
+  @IsOptional()
+  @IsString()
+  @IsNotEmpty()
+  direccion?: string;
 }

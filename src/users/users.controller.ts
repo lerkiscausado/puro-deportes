@@ -1,8 +1,17 @@
-import { Body, Controller, Get, Post, Req, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  Patch,
+  Post,
+  Req,
+  UseGuards,
+} from '@nestjs/common';
 import type { Request } from 'express';
 import { UsersService } from './users.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { LoginUserDto } from './dto/login-user.dto';
+import { UpdateProfileDto } from './dto/update-profile.dto';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import { RolesGuard } from './guards/roles.guard';
 import { Roles } from './decorators/roles.decorator';
@@ -66,6 +75,30 @@ export class UsersController {
   async getProfile(@Req() req: Request) {
     // req['user'].sub contiene el ID del usuario extraído del token JWT
     return this.usersService.findById(req['user'].sub);
+  }
+
+  /**
+   * Endpoint para actualizar el perfil del usuario autenticado.
+   * Ruta: PATCH /users/profile
+   *
+   * Requiere autenticación mediante token JWT en el header:
+   * Authorization: Bearer <token>
+   *
+   * Campos actualizables: phone, name, genero, fechaNacimiento, direccion, password.
+   * No permite modificar email ni role por seguridad.
+   *
+   * @param req - Objeto request con el payload del JWT adjuntado por el guard
+   * @param updateProfileDto - Campos a actualizar (todos opcionales)
+   * @returns Los datos del usuario actualizado sin el campo password
+   */
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(Role.ADMIN, Role.MANAGER, Role.USER)
+  @Patch('profile')
+  async updateProfile(
+    @Req() req: Request,
+    @Body() updateProfileDto: UpdateProfileDto,
+  ) {
+    return this.usersService.updateProfile(req['user'].sub, updateProfileDto);
   }
 
   /**

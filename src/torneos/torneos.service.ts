@@ -4,6 +4,8 @@ import { Repository } from 'typeorm';
 import { Torneo } from './torneo.entity';
 import { CreateTorneoDto } from './dto/create-torneo.dto';
 import { User } from '../users/user.entity';
+import { Escenario } from '../escenarios/escenario.entity';
+import { EstadoTorneo } from './enums/estado-torneo.enum';
 
 /**
  * Servicio de torneos.
@@ -19,6 +21,10 @@ export class TorneosService {
     /** Repositorio de TypeORM para buscar usuarios relacionados */
     @InjectRepository(User)
     private readonly usersRepository: Repository<User>,
+
+    /** Repositorio de TypeORM para buscar escenarios relacionados */
+    @InjectRepository(Escenario)
+    private readonly escenariosRepository: Repository<Escenario>,
   ) {}
 
   /**
@@ -48,12 +54,30 @@ export class TorneosService {
       throw new NotFoundException('Usuario no encontrado');
     }
 
+    const { idEscenario, ...torneoData } = createTorneoDto;
+
+    // Buscar y validar el escenario si se provee
+    let escenario: Escenario | undefined = undefined;
+    if (idEscenario) {
+      const foundEscenario = await this.escenariosRepository.findOne({
+        where: { id: idEscenario },
+      });
+      if (!foundEscenario) {
+        throw new NotFoundException(
+          `Escenario con ID ${idEscenario} no encontrado`,
+        );
+      }
+      escenario = foundEscenario;
+    }
+
     // Crea la instancia del torneo con los datos y archivos
     const torneo = this.torneosRepository.create({
-      ...createTorneoDto,
+      ...torneoData,
+      estado: EstadoTorneo.INSCRIPCIONES,
       foto: files?.foto?.[0]?.filename,
       reglamento: files?.reglamento?.[0]?.filename,
       user,
+      escenario,
     } as Partial<Torneo>);
 
     // Guarda el torneo en la base de datos

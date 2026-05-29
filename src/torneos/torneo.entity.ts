@@ -6,11 +6,14 @@ import {
   UpdateDateColumn,
   ManyToOne,
   JoinColumn,
+  OneToMany,
 } from 'typeorm';
 import { User } from '../users/user.entity';
 import { Deporte } from './enums/deporte.enum';
 import { Rama } from './enums/rama.enum';
 import { EstadoTorneo } from './enums/estado-torneo.enum';
+import { Partido } from '../partidos/partido.entity';
+import { Escenario } from '../escenarios/escenario.entity';
 
 /**
  * Entidad Torneo - Representa la tabla 'torneos' en la base de datos.
@@ -62,7 +65,11 @@ export class Torneo {
    * Valores posibles: Inscripciones, En Juego, Finalizado, Suspendido.
    * Por defecto se crea en estado 'Inscripciones'.
    */
-  @Column({ type: 'enum', enum: EstadoTorneo, default: EstadoTorneo.INSCRIPCIONES })
+  @Column({
+    type: 'enum',
+    enum: EstadoTorneo,
+    default: EstadoTorneo.INSCRIPCIONES,
+  })
   estado: EstadoTorneo;
 
   /**
@@ -74,6 +81,19 @@ export class Torneo {
   @JoinColumn({ name: 'idUser' })
   user: User;
 
+  /**
+   * Relación ManyToOne con la entidad Escenario.
+   * Representa el escenario por defecto asignado al torneo.
+   * eager: true carga automáticamente los datos del escenario al consultar el torneo.
+   */
+  @ManyToOne(() => Escenario, {
+    nullable: true,
+    onDelete: 'SET NULL',
+    eager: true,
+  })
+  @JoinColumn({ name: 'idEscenario' })
+  escenario: Escenario;
+
   /** Fecha de creación del registro (generada automáticamente por TypeORM) */
   @CreateDateColumn()
   createdAt: Date;
@@ -81,4 +101,11 @@ export class Torneo {
   /** Fecha de última actualización del registro (actualizada automáticamente por TypeORM) */
   @UpdateDateColumn()
   updatedAt: Date;
+
+  /**
+   * Relación OneToMany con la entidad Partido.
+   * Un torneo puede tener múltiples partidos.
+   */
+  @OneToMany(() => Partido, (partido) => partido.torneo)
+  partidos: Partido[];
 }

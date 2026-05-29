@@ -1,4 +1,8 @@
-import { ConflictException, Injectable, UnauthorizedException } from '@nestjs/common';
+import {
+  ConflictException,
+  Injectable,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { JwtService } from '@nestjs/jwt';
 import { Repository } from 'typeorm';
@@ -6,6 +10,7 @@ import * as bcrypt from 'bcrypt';
 import { User } from './user.entity';
 import { CreateUserDto } from './dto/create-user.dto';
 import { LoginUserDto } from './dto/login-user.dto';
+import { UpdateProfileDto } from './dto/update-profile.dto';
 
 /**
  * Servicio de usuarios.
@@ -34,7 +39,9 @@ export class UsersService {
    * @returns El usuario creado sin el campo password
    * @throws ConflictException si el email ya está registrado
    */
-  async register(createUserDto: CreateUserDto): Promise<Omit<User, 'password'>> {
+  async register(
+    createUserDto: CreateUserDto,
+  ): Promise<Omit<User, 'password'>> {
     // Busca si ya existe un usuario con el mismo email
     const existingUser = await this.usersRepository.findOne({
       where: { email: createUserDto.email },
@@ -77,7 +84,9 @@ export class UsersService {
    * @returns Objeto con el access_token JWT y los datos básicos del usuario
    * @throws UnauthorizedException si el email no existe o la contraseña es incorrecta
    */
-  async login(loginUserDto: LoginUserDto): Promise<{ access_token: string; user: Omit<User, 'password'> }> {
+  async login(
+    loginUserDto: LoginUserDto,
+  ): Promise<{ access_token: string; user: Omit<User, 'password'> }> {
     // Busca el usuario por email
     const user = await this.usersRepository.findOne({
       where: { email: loginUserDto.email },
@@ -89,7 +98,10 @@ export class UsersService {
     }
 
     // Compara la contraseña enviada con el hash almacenado en la base de datos
-    const isPasswordValid = await bcrypt.compare(loginUserDto.password, user.password);
+    const isPasswordValid = await bcrypt.compare(
+      loginUserDto.password,
+      user.password,
+    );
 
     // Si la contraseña no coincide, lanza excepción 401
     if (!isPasswordValid) {
@@ -97,7 +109,12 @@ export class UsersService {
     }
 
     // Genera el payload del token con los datos básicos del usuario (incluye el rol)
-    const payload = { sub: user.id, email: user.email, name: user.name, role: user.role };
+    const payload = {
+      sub: user.id,
+      email: user.email,
+      name: user.name,
+      role: user.role,
+    };
 
     // Desestructura para excluir la contraseña de la respuesta
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -133,6 +150,61 @@ export class UsersService {
     // Excluye la contraseña de la respuesta
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { password, ...result } = user;
+    return result;
+  }
+
+  /**
+   * Actualiza el perfil de un usuario autenticado.
+   *
+   * Solo permite actualizar los campos: phone, name, genero,
+   * fechaNacimiento, direccion y password (opcional).
+   * No permite modificar email ni role por seguridad.
+   *
+   * Si se envía un nuevo password, se hashea con bcrypt antes de guardarlo.
+   *
+   * @param userId - ID del usuario a actualizar
+   * @param updateProfileDto - Campos a actualizar
+   * @returns Los datos del usuario actualizado sin el campo password
+   * @throws UnauthorizedException si el usuario no existe
+   */
+  async updateProfile(
+    userId: number,
+    updateProfileDto: UpdateProfileDto,
+  ): Promise<Omit<User, 'password'>> {
+    // Busca el usuario por su ID
+    const user = await this.usersRepository.findOne({
+      where: { id: userId },
+    });
+
+    // Si no se encuentra el usuario, lanza excepción 401
+    if (!user) {
+      throw new UnauthorizedException('Usuario no encontrado');
+    }
+
+    // Si se envió un nuevo password, lo hashea con bcrypt
+    if (updateProfileDto.password) {
+      updateProfileDto.password = await bcrypt.hash(
+        updateProfileDto.password,
+        10,
+      );
+    }
+
+    // Filtra solo los campos que fueron enviados (no undefined)
+    const fieldsToUpdate = Object.fromEntries(
+      Object.entries(updateProfileDto).filter(
+        ([, value]) => value !== undefined,
+      ),
+    );
+
+    // Actualiza solo los campos enviados en el DTO
+    Object.assign(user, fieldsToUpdate);
+
+    // Guarda los cambios en la base de datos
+    const updatedUser = await this.usersRepository.save(user);
+
+    // Excluye la contraseña de la respuesta
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { password, ...result } = updatedUser;
     return result;
   }
 }

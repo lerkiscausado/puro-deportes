@@ -6,6 +6,7 @@ import { Torneo } from './torneo.entity';
 import { User } from '../users/user.entity';
 import { TorneosService } from './torneos.service';
 import { TorneosController } from './torneos.controller';
+import { Escenario } from '../escenarios/escenario.entity';
 
 /**
  * Módulo de torneos.
@@ -17,7 +18,7 @@ import { TorneosController } from './torneos.controller';
  */
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Torneo, User]),
+    TypeOrmModule.forFeature([Torneo, User, Escenario]),
     JwtModule.registerAsync({
       imports: [ConfigModule],
       inject: [ConfigService],

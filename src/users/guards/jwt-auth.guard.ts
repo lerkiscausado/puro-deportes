@@ -28,7 +28,9 @@ export class JwtAuthGuard implements CanActivate {
     const token = this.extractTokenFromHeader(request);
 
     if (!token) {
-      throw new UnauthorizedException('Token de autenticación no proporcionado');
+      throw new UnauthorizedException(
+        'Token de autenticación no proporcionado',
+      );
     }
 
     try {
@@ -38,7 +40,9 @@ export class JwtAuthGuard implements CanActivate {
       // Adjunta el payload al request para que esté disponible en el controlador
       request['user'] = payload;
     } catch {
-      throw new UnauthorizedException('Token de autenticación inválido o expirado');
+      throw new UnauthorizedException(
+        'Token de autenticación inválido o expirado',
+      );
     }
 
     return true;

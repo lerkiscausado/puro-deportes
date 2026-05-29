@@ -7,7 +7,11 @@ import {
   OneToMany,
 } from 'typeorm';
 import { Role } from './enums/role.enum';
+import { Genero } from './enums/genero.enum';
 import { Torneo } from '../torneos/torneo.entity';
+import { Escenario } from '../escenarios/escenario.entity';
+import { Equipo } from '../equipos/equipo.entity';
+import { Partido } from '../partidos/partido.entity';
 
 /**
  * Entidad User - Representa la tabla 'users' en la base de datos.
@@ -35,6 +39,18 @@ export class User {
   @Column()
   name: string;
 
+  /** Género del usuario (Hombre o Mujer) */
+  @Column({ type: 'enum', enum: Genero, nullable: true })
+  genero: Genero;
+
+  /** Fecha de nacimiento del usuario */
+  @Column({ type: 'date', nullable: true })
+  fechaNacimiento: Date;
+
+  /** Dirección del usuario */
+  @Column({ nullable: true })
+  direccion: string;
+
   /**
    * Rol del usuario en la plataforma.
    * Valores posibles: 'admin', 'manager', 'user'.
@@ -57,4 +73,25 @@ export class User {
    */
   @OneToMany(() => Torneo, (torneo) => torneo.user)
   torneos: Torneo[];
+
+  /**
+   * Relación OneToMany con la entidad Escenario.
+   * Un usuario puede crear/administrar múltiples escenarios.
+   */
+  @OneToMany(() => Escenario, (escenario) => escenario.user)
+  escenarios: Escenario[];
+
+  /**
+   * Relación OneToMany con la entidad Equipo.
+   * Un usuario puede crear/administrar múltiples equipos.
+   */
+  @OneToMany(() => Equipo, (equipo) => equipo.user)
+  equipos: Equipo[];
+
+  /**
+   * Relación OneToMany con la entidad Partido.
+   * Un usuario puede crear/administrar múltiples partidos.
+   */
+  @OneToMany(() => Partido, (partido) => partido.user)
+  partidos: Partido[];
 }

@@ -46,7 +46,7 @@ const storageConfig = diskStorage({
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Controller('torneos')
 export class TorneosController {
-  constructor(private readonly torneosService: TorneosService) { }
+  constructor(private readonly torneosService: TorneosService) {}
 
   /**
    * Endpoint para crear un nuevo torneo.
