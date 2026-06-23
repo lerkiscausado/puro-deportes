@@ -14,6 +14,10 @@ import { Torneo } from '../torneos/torneo.entity';
 import { Equipo } from '../equipos/equipo.entity';
 import { Role } from '../users/enums/role.enum';
 import { Escenario } from '../escenarios/escenario.entity';
+import { Inscripcion } from '../inscripciones/inscripcion.entity';
+import { EstadoInscripcion } from '../inscripciones/enums/estado-inscripcion.enum';
+import { EstadoPartido } from './enums/estado-partido.enum';
+import { TipoJuego } from './enums/tipo-juego.enum';
 
 /**
  * Servicio de partidos.
@@ -41,6 +45,10 @@ export class PartidosService {
     /** Repositorio de TypeORM para consultar la relación con la entidad Escenario */
     @InjectRepository(Escenario)
     private readonly escenariosRepository: Repository<Escenario>,
+
+    /** Repositorio de TypeORM para operaciones en la tabla 'inscripciones' */
+    @InjectRepository(Inscripcion)
+    private readonly inscripcionesRepository: Repository<Inscripcion>,
   ) {}
 
   /**
@@ -421,6 +429,7 @@ export class PartidosService {
     }
 
     await this.partidosRepository.save(partidoActualizado);
+    await this.recalculateTournamentStandings(finalTorneoId);
     return this.findOne(id);
   }
 
@@ -442,6 +451,111 @@ export class PartidosService {
       );
     }
 
+    const torneoId = partido.torneo.id;
     await this.partidosRepository.remove(partido);
+    await this.recalculateTournamentStandings(torneoId);
+  }
+
+  /**
+   * Recalcula la tabla de posiciones (inscripciones) de un torneo
+   * a partir de todos los partidos finalizados de tipo OFICIAL.
+   */
+  async recalculateTournamentStandings(torneoId: number): Promise<void> {
+    // 1. Obtener todas las inscripciones activas del torneo
+    const inscripciones = await this.inscripcionesRepository.find({
+      where: { torneo: { id: torneoId }, estado: EstadoInscripcion.ACTIVO },
+      relations: { equipo: true },
+    });
+
+    // Resetear estadísticas
+    for (const insc of inscripciones) {
+      insc.partidosJugados = 0;
+      insc.partidosGanados = 0;
+      insc.partidosEmpatados = 0;
+      insc.partidosPerdidos = 0;
+      insc.puntosFavor = 0;
+      insc.puntosContra = 0;
+      insc.diferencia = 0;
+      insc.puntos = 0;
+    }
+
+    // 2. Obtener el torneo para conocer la disciplina deportiva
+    const torneo = await this.torneosRepository.findOne({
+      where: { id: torneoId },
+    });
+    if (!torneo) return;
+
+    // Definir reglas de puntuación por disciplina
+    let ptsGanado = 3;
+    let ptsEmpatado = 1;
+    let ptsPerdido = 0;
+
+    const dep = torneo.deporte ? torneo.deporte.toLowerCase() : '';
+    if (dep.includes('basket') || dep.includes('baloncesto') || dep.includes('voley') || dep.includes('voleibol')) {
+      ptsGanado = 2;
+      ptsEmpatado = 0;
+      ptsPerdido = 1;
+    }
+
+    // 3. Obtener todos los partidos finalizados oficiales de este torneo
+    const partidosFinalizados = await this.partidosRepository.find({
+      where: {
+        torneo: { id: torneoId },
+        estado: EstadoPartido.FINALIZADO,
+        tipoJuego: TipoJuego.OFICIAL,
+      },
+      relations: { equipoLocal: true, equipoVisitante: true },
+    });
+
+    // 4. Acumular estadísticas
+    for (const partido of partidosFinalizados) {
+      if (!partido.equipoLocal || !partido.equipoVisitante) continue;
+
+      const localInsc = inscripciones.find((i) => i.equipo.id === partido.equipoLocal.id);
+      const visitanteInsc = inscripciones.find((i) => i.equipo.id === partido.equipoVisitante.id);
+
+      if (localInsc && visitanteInsc) {
+        const scoreLocal = partido.local ?? 0;
+        const scoreVisitante = partido.visitante ?? 0;
+
+        // PJ
+        localInsc.partidosJugados += 1;
+        visitanteInsc.partidosJugados += 1;
+
+        // Goles/Puntos a favor y en contra
+        localInsc.puntosFavor += scoreLocal;
+        localInsc.puntosContra += scoreVisitante;
+
+        visitanteInsc.puntosFavor += scoreVisitante;
+        visitanteInsc.puntosContra += scoreLocal;
+
+        // Ganador / Perdedor / Empate
+        if (scoreLocal > scoreVisitante) {
+          localInsc.partidosGanados += 1;
+          localInsc.puntos += ptsGanado;
+
+          visitanteInsc.partidosPerdidos += 1;
+          visitanteInsc.puntos += ptsPerdido;
+        } else if (scoreLocal < scoreVisitante) {
+          visitanteInsc.partidosGanados += 1;
+          visitanteInsc.puntos += ptsGanado;
+
+          localInsc.partidosPerdidos += 1;
+          localInsc.puntos += ptsPerdido;
+        } else {
+          localInsc.partidosEmpatados += 1;
+          localInsc.puntos += ptsEmpatado;
+
+          visitanteInsc.partidosEmpatados += 1;
+          visitanteInsc.puntos += ptsEmpatado;
+        }
+      }
+    }
+
+    // 5. Guardar los cambios actualizando la diferencia
+    for (const insc of inscripciones) {
+      insc.diferencia = insc.puntosFavor - insc.puntosContra;
+      await this.inscripcionesRepository.save(insc);
+    }
   }
 }

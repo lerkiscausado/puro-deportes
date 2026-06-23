@@ -48,13 +48,12 @@ export class CreateJugadorDto {
   @IsNotEmpty({ message: 'La estatura es obligatoria.' })
   estatura: number;
 
-  /** Identificación del jugador (cédula, pasaporte, etc.) - opcional */
-  @IsOptional()
+  /** Identificación del jugador (cédula, pasaporte, etc.) */
   @IsString()
   @IsNotEmpty({
-    message: 'La identificación no puede estar vacía si se envía.',
+    message: 'La identificación es obligatoria y no puede estar vacía.',
   })
-  identificacion?: string;
+  identificacion: string;
 
   /** Estado del jugador - opcional, por defecto 'Activo' */
   @IsOptional()

@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Jugador } from './jugador.entity';
@@ -24,17 +24,65 @@ export class JugadoresService {
    * @returns El jugador creado y guardado
    */
   async create(createJugadorDto: CreateJugadorDto): Promise<Jugador> {
+    if (createJugadorDto.identificacion) {
+      const existing = await this.jugadoresRepository.findOne({
+        where: { identificacion: createJugadorDto.identificacion },
+      });
+      if (existing) {
+        throw new BadRequestException(
+          `Ya existe un jugador registrado con la identificación: ${createJugadorDto.identificacion}`,
+        );
+      }
+    }
+
     const jugador = this.jugadoresRepository.create(createJugadorDto);
     return this.jugadoresRepository.save(jugador);
   }
 
   /**
-   * Obtiene todos los jugadores registrados.
+   * Obtiene todos los jugadores registrados con soporte para paginación y filtros.
    *
-   * @returns Lista completa de jugadores
+   * @param query - Parámetros opcionales de búsqueda, género y paginación.
+   * @returns Lista completa de jugadores o datos paginados.
    */
-  async findAll(): Promise<Jugador[]> {
-    return this.jugadoresRepository.find();
+  async findAll(query?: {
+    page?: number;
+    limit?: number;
+    search?: string;
+    gender?: string;
+  }): Promise<Jugador[] | { data: Jugador[]; total: number; page: number; limit: number }> {
+    const { page, limit = 15, search, gender } = query || {};
+
+    const queryBuilder = this.jugadoresRepository.createQueryBuilder('jugador');
+
+    if (search) {
+      const searchLower = `%${search.toLowerCase()}%`;
+      queryBuilder.andWhere(
+        '(LOWER(jugador.nombre) LIKE :search OR LOWER(jugador.apellidos) LIKE :search OR jugador.identificacion LIKE :search)',
+        { search: searchLower },
+      );
+    }
+
+    if (gender && gender !== 'all') {
+      queryBuilder.andWhere('jugador.genero = :gender', { gender });
+    }
+
+    if (page) {
+      const skip = (page - 1) * limit;
+      const [data, total] = await queryBuilder
+        .skip(skip)
+        .take(limit)
+        .getManyAndCount();
+
+      return {
+        data,
+        total,
+        page,
+        limit,
+      };
+    }
+
+    return queryBuilder.getMany();
   }
 
   /**
@@ -66,6 +114,20 @@ export class JugadoresService {
     updateJugadorDto: UpdateJugadorDto,
   ): Promise<Jugador> {
     const jugador = await this.findOne(id);
+
+    if (
+      updateJugadorDto.identificacion &&
+      updateJugadorDto.identificacion !== jugador.identificacion
+    ) {
+      const existing = await this.jugadoresRepository.findOne({
+        where: { identificacion: updateJugadorDto.identificacion },
+      });
+      if (existing && existing.id !== id) {
+        throw new BadRequestException(
+          `Ya existe un jugador registrado con la identificación: ${updateJugadorDto.identificacion}`,
+        );
+      }
+    }
 
     const jugadorActualizado = this.jugadoresRepository.merge(
       jugador,

@@ -7,6 +7,7 @@ import {
   ParseIntPipe,
   Patch,
   Post,
+  Query,
   UseGuards,
 } from '@nestjs/common';
 import { JugadoresService } from './jugadores.service';
@@ -42,15 +43,31 @@ export class JugadoresController {
   }
 
   /**
-   * Endpoint para obtener todos los jugadores registrados.
+   * Endpoint para obtener todos los jugadores registrados con soporte para paginación y filtros.
    * Ruta: GET /jugadores
    *
-   * @returns Lista completa de jugadores
+   * @param page - Número de página (opcional)
+   * @param limit - Cantidad de jugadores por página (opcional)
+   * @param search - Término de búsqueda por nombre, apellidos o identificación (opcional)
+   * @param gender - Género a filtrar (opcional)
+   * @returns Lista completa o paginada de jugadores
    */
   @Roles(Role.ADMIN, Role.MANAGER, Role.USER)
   @Get()
-  async findAll() {
-    return this.jugadoresService.findAll();
+  async findAll(
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
+    @Query('search') search?: string,
+    @Query('gender') gender?: string,
+  ) {
+    const pageNum = page ? parseInt(page, 10) : undefined;
+    const limitNum = limit ? parseInt(limit, 10) : undefined;
+    return this.jugadoresService.findAll({
+      page: pageNum,
+      limit: limitNum,
+      search,
+      gender,
+    });
   }
 
   /**
@@ -74,7 +91,7 @@ export class JugadoresController {
    * @param updateJugadorDto - Nuevos datos del jugador
    * @returns El jugador modificado
    */
-  @Roles(Role.ADMIN, Role.MANAGER, Role.USER)
+  @Roles(Role.ADMIN, Role.MANAGER)
   @Patch(':id')
   async update(
     @Param('id', ParseIntPipe) id: number,
@@ -90,7 +107,7 @@ export class JugadoresController {
    * @param id - ID del jugador a eliminar
    * @returns Mensaje de confirmación del jugador eliminado
    */
-  @Roles(Role.ADMIN, Role.MANAGER, Role.USER)
+  @Roles(Role.ADMIN, Role.MANAGER)
   @Delete(':id')
   async remove(@Param('id', ParseIntPipe) id: number) {
     await this.jugadoresService.remove(id);

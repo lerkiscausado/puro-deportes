@@ -125,7 +125,7 @@ export class EscenariosService {
 
   /**
    * Actualiza un escenario existente.
-   * Permite la actualización al creador del escenario o a un administrador.
+   * Permite la actualización únicamente a un administrador.
    *
    * @param id - ID del escenario a actualizar
    * @param updateEscenarioDto - Campos a modificar
@@ -141,10 +141,10 @@ export class EscenariosService {
   ): Promise<Escenario> {
     const escenario = await this.findOne(id);
 
-    // Permite la edición si es el dueño (creador) del escenario o si es Administrador
-    if (escenario.user.id !== userId && userRole !== Role.ADMIN) {
+    // Permite la edición únicamente si el usuario es Administrador
+    if (userRole !== Role.ADMIN) {
       throw new ForbiddenException(
-        'No tienes permiso para actualizar este escenario.',
+        'Solo los administradores tienen permiso para actualizar escenarios.',
       );
     }
 

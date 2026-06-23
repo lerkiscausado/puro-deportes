@@ -1,11 +1,18 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+  ForbiddenException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, Not } from 'typeorm';
 import { Torneo } from './torneo.entity';
 import { CreateTorneoDto } from './dto/create-torneo.dto';
+import { UpdateTorneoDto } from './dto/update-torneo.dto';
 import { User } from '../users/user.entity';
 import { Escenario } from '../escenarios/escenario.entity';
 import { EstadoTorneo } from './enums/estado-torneo.enum';
+import { Role } from '../users/enums/role.enum';
 
 /**
  * Servicio de torneos.
@@ -120,5 +127,124 @@ export class TorneosService {
     return this.torneosRepository.find({
       where: { user: { id: userId } },
     });
+  }
+
+  /**
+   * Actualiza un torneo existente.
+   * Permite actualizar únicamente el nombre y el estado, siempre y cuando
+   * el estado actual del torneo sea diferente a 'Finalizado'.
+   *
+   * @param id - ID del torneo a actualizar
+   * @param updateTorneoDto - Campos a modificar (name y/o estado)
+   * @param userId - ID del usuario solicitante
+   * @param userRole - Rol del usuario solicitante
+   * @returns El torneo actualizado
+   */
+  async update(
+    id: number,
+    updateTorneoDto: UpdateTorneoDto,
+    userId: number,
+    userRole: Role,
+  ): Promise<Torneo> {
+    const torneo = await this.findOne(id);
+
+    // Permite la edición si es el dueño (creador) del torneo o si es Administrador
+    if (torneo.user.id !== userId && userRole !== Role.ADMIN) {
+      throw new ForbiddenException(
+        'No tienes permiso para actualizar este torneo.',
+      );
+    }
+
+    // Valida que el estado actual no sea 'Finalizado'
+    if (torneo.estado === EstadoTorneo.FINALIZADO) {
+      throw new BadRequestException(
+        'No se puede actualizar un torneo que ya está Finalizado.',
+      );
+    }
+
+    // Mezcla las propiedades actualizadas
+    const torneoActualizado = this.torneosRepository.merge(
+      torneo,
+      updateTorneoDto,
+    );
+
+    return this.torneosRepository.save(torneoActualizado);
+  }
+
+  /**
+   * Obtiene todos los torneos que no estén finalizados agrupados por deporte y rama.
+   * Estructura de retorno requerida:
+   * deportes:
+   *   baloncesto:
+   *     masculino: [...]
+   *     femenino: [...]
+   *   futbol:
+   *     masculino: [...]
+   *     femenino: [...]
+   *   volibol:
+   *     masculino: [...]
+   *     femenino: [...]
+   *     mixto: [...]
+   */
+  async findPublicGrouped(): Promise<any> {
+    const torneos = await this.torneosRepository.find({
+      where: {
+        estado: Not(EstadoTorneo.FINALIZADO),
+      },
+    });
+
+    // Estructura base requerida pre-inicializada
+    const result: any = {
+      deportes: {
+        baloncesto: {
+          masculino: [],
+          femenino: [],
+        },
+        futbol: {
+          masculino: [],
+          femenino: [],
+        },
+        volibol: {
+          masculino: [],
+          femenino: [],
+          mixto: [],
+        },
+      },
+    };
+
+    // Mapeo de enums a las claves correspondientes en la respuesta
+    const sportKeyMap: Record<string, string> = {
+      'Baloncesto': 'baloncesto',
+      'Futbol': 'futbol',
+      'Voleibol': 'volibol',
+      'Microfutbol': 'microfutbol',
+      'Golito': 'golito',
+    };
+
+    const ramaKeyMap: Record<string, string> = {
+      'Masculino': 'masculino',
+      'Femenino': 'femenino',
+      'Mixto': 'mixto',
+    };
+
+    for (const torneo of torneos) {
+      const sportKey = sportKeyMap[torneo.deporte];
+      const ramaKey = ramaKeyMap[torneo.rama];
+
+      if (sportKey && ramaKey) {
+        // Inicializar dinámicamente si no existe la clave del deporte (ej. microfutbol/golito)
+        if (!result.deportes[sportKey]) {
+          result.deportes[sportKey] = {};
+        }
+        // Inicializar dinámicamente si no existe la categoría del género
+        if (!result.deportes[sportKey][ramaKey]) {
+          result.deportes[sportKey][ramaKey] = [];
+        }
+
+        result.deportes[sportKey][ramaKey].push(torneo);
+      }
+    }
+
+    return result;
   }
 }

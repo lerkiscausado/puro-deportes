@@ -97,7 +97,7 @@ export class EscenariosController {
    * @param req - Objeto request con el payload del JWT
    * @returns El escenario modificado
    */
-  @Roles(Role.ADMIN, Role.MANAGER, Role.USER)
+  @Roles(Role.ADMIN)
   @Patch(':id')
   async update(
     @Param('id', ParseIntPipe) id: number,

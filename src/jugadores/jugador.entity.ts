@@ -41,8 +41,8 @@ export class Jugador {
   @Column({ type: 'float' })
   estatura: number;
 
-  /** Identificación del jugador (cédula, pasaporte, etc.) - opcional */
-  @Column({ nullable: true })
+  /** Identificación del jugador (cédula, pasaporte, etc.) */
+  @Column({ unique: true })
   identificacion: string;
 
   /**

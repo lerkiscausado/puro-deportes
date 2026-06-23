@@ -4,6 +4,7 @@ import {
   Get,
   Param,
   ParseIntPipe,
+  Patch,
   Post,
   Req,
   UploadedFiles,
@@ -16,10 +17,12 @@ import { extname } from 'path';
 import type { Request } from 'express';
 import { TorneosService } from './torneos.service';
 import { CreateTorneoDto } from './dto/create-torneo.dto';
+import { UpdateTorneoDto } from './dto/update-torneo.dto';
 import { JwtAuthGuard } from '../users/guards/jwt-auth.guard';
 import { RolesGuard } from '../users/guards/roles.guard';
 import { Roles } from '../users/decorators/roles.decorator';
 import { Role } from '../users/enums/role.enum';
+import { Public } from '../users/decorators/public.decorator';
 
 /**
  * Configuración de almacenamiento para archivos subidos.
@@ -96,6 +99,18 @@ export class TorneosController {
   }
 
   /**
+   * Endpoint público para obtener los torneos agrupados por deporte y rama.
+   * Ruta: GET /torneos/public
+   *
+   * @returns Torneos no finalizados agrupados
+   */
+  @Public()
+  @Get('public')
+  async findPublicGrouped() {
+    return this.torneosService.findPublicGrouped();
+  }
+
+  /**
    * Endpoint para obtener los torneos del usuario autenticado.
    * Ruta: GET /torneos/mis-torneos
    *
@@ -124,5 +139,32 @@ export class TorneosController {
   @Get(':id')
   async findOne(@Param('id', ParseIntPipe) id: number) {
     return this.torneosService.findOne(id);
+  }
+
+  /**
+   * Endpoint para actualizar parcialmente un torneo por su ID.
+   * Ruta: PATCH /torneos/:id
+   *
+   * Roles permitidos: admin, manager, user.
+   * La lógica interna restringe la edición al dueño (creador) o al admin.
+   *
+   * @param id - ID del torneo a actualizar
+   * @param updateTorneoDto - Nuevos datos del torneo
+   * @param req - Objeto request con el payload del JWT
+   * @returns El torneo modificado
+   */
+  @Roles(Role.ADMIN, Role.MANAGER, Role.USER)
+  @Patch(':id')
+  async update(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() updateTorneoDto: UpdateTorneoDto,
+    @Req() req: Request,
+  ) {
+    return this.torneosService.update(
+      id,
+      updateTorneoDto,
+      req['user'].sub,
+      req['user'].role,
+    );
   }
 }

@@ -13,6 +13,7 @@ import { UploadsModule } from './uploads/uploads.module';
 import { InscripcionesModule } from './inscripciones/inscripciones.module';
 import { PlanillasModule } from './planillas/planillas.module';
 import { PartidoPeriodosModule } from './partidoperiodos/partidoperiodos.module';
+import { NoticiasModule } from './noticias/noticias.module';
 
 @Module({
   imports: [
@@ -44,6 +45,7 @@ import { PartidoPeriodosModule } from './partidoperiodos/partidoperiodos.module'
     InscripcionesModule,
     PlanillasModule,
     PartidoPeriodosModule,
+    NoticiasModule,
   ],
   controllers: [AppController],
   providers: [AppService],

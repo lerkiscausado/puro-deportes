@@ -9,6 +9,7 @@ import { User } from '../users/user.entity';
 import { Torneo } from '../torneos/torneo.entity';
 import { Equipo } from '../equipos/equipo.entity';
 import { Escenario } from '../escenarios/escenario.entity';
+import { Inscripcion } from '../inscripciones/inscripcion.entity';
 
 /**
  * Módulo de Partidos.
@@ -16,7 +17,7 @@ import { Escenario } from '../escenarios/escenario.entity';
  */
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Partido, User, Torneo, Equipo, Escenario]),
+    TypeOrmModule.forFeature([Partido, User, Torneo, Equipo, Escenario, Inscripcion]),
     JwtModule.registerAsync({
       imports: [ConfigModule],
       inject: [ConfigService],

@@ -4,7 +4,7 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, Not } from 'typeorm';
 import { Planilla } from './planilla.entity';
 import { CreatePlanillaDto } from './dto/create-planilla.dto';
 import { UpdatePlanillaDto } from './dto/update-planilla.dto';
@@ -101,19 +101,21 @@ export class PlanillasService {
       throw new NotFoundException(`Jugador con ID ${idJugador} no encontrado`);
     }
 
-    // 5. Evitar duplicar al mismo jugador en el mismo equipo y torneo de forma activa
-    const existente = await this.planillasRepository.findOne({
+    // 5. Evitar duplicar al mismo jugador en cualquier equipo de este torneo de forma activa
+    const existenteEnTorneo = await this.planillasRepository.findOne({
       where: {
         torneo: { id: idTorneo },
-        equipo: { id: idEquipo },
         jugador: { id: idJugador },
         estado: EstadoPlanilla.ACTIVO,
       },
+      relations: {
+        equipo: true,
+      },
     });
 
-    if (existente) {
+    if (existenteEnTorneo) {
       throw new BadRequestException(
-        `El jugador "${jugador.nombre} ${jugador.apellidos}" ya está registrado y activo en la planilla de este equipo para este torneo.`,
+        `El jugador "${jugador.nombre} ${jugador.apellidos}" ya está registrado y activo en el torneo bajo el equipo "${existenteEnTorneo.equipo.nombre}".`,
       );
     }
 
@@ -243,6 +245,30 @@ export class PlanillasService {
         );
       }
       planilla.jugador = jugador;
+    }
+
+    const checkTorneoId = idTorneo !== undefined ? idTorneo : planilla.torneo.id;
+    const checkJugadorId = idJugador !== undefined ? idJugador : planilla.jugador.id;
+
+    // Verificar si el jugador ya está registrado de forma activa en cualquier otro equipo para este torneo
+    const existenteEnTorneo = await this.planillasRepository.findOne({
+      where: {
+        torneo: { id: checkTorneoId },
+        jugador: { id: checkJugadorId },
+        estado: EstadoPlanilla.ACTIVO,
+        id: Not(id),
+      },
+      relations: {
+        equipo: true,
+      },
+    });
+
+    if (existenteEnTorneo) {
+      const jugadorNombre = idJugador !== undefined ? (await this.jugadoresRepository.findOne({ where: { id: idJugador } }))?.nombre : planilla.jugador.nombre;
+      const jugadorApellidos = idJugador !== undefined ? (await this.jugadoresRepository.findOne({ where: { id: idJugador } }))?.apellidos : planilla.jugador.apellidos;
+      throw new BadRequestException(
+        `El jugador "${jugadorNombre} ${jugadorApellidos}" ya está registrado y activo en el torneo bajo el equipo "${existenteEnTorneo.equipo.nombre}".`,
+      );
     }
 
     const planillaActualizada = this.planillasRepository.merge(planilla, resto);
