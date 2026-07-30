@@ -10,7 +10,7 @@ import {
   Req,
   UseGuards,
 } from '@nestjs/common';
-import type { Request } from 'express';
+import type { RequestWithUser } from '../common/interfaces/request-with-user.interface';
 import { PartidosService } from './partidos.service';
 import { CreatePartidoDto } from './dto/create-partido.dto';
 import { UpdatePartidoDto } from './dto/update-partido.dto';
@@ -42,9 +42,9 @@ export class PartidosController {
   @Post()
   async create(
     @Body() createPartidoDto: CreatePartidoDto,
-    @Req() req: Request,
+    @Req() req: RequestWithUser,
   ) {
-    return this.partidosService.create(createPartidoDto, req['user'].sub);
+    return this.partidosService.create(createPartidoDto, req.user.sub);
   }
 
   /**
@@ -68,8 +68,8 @@ export class PartidosController {
    */
   @Roles(Role.ADMIN, Role.MANAGER, Role.USER)
   @Get('mis-partidos')
-  async findMyPartidos(@Req() req: Request) {
-    return this.partidosService.findByUser(req['user'].sub);
+  async findMyPartidos(@Req() req: RequestWithUser) {
+    return this.partidosService.findByUser(req.user.sub);
   }
 
   /**
@@ -112,13 +112,13 @@ export class PartidosController {
   async update(
     @Param('id', ParseIntPipe) id: number,
     @Body() updatePartidoDto: UpdatePartidoDto,
-    @Req() req: Request,
+    @Req() req: RequestWithUser,
   ) {
     return this.partidosService.update(
       id,
       updatePartidoDto,
-      req['user'].sub,
-      req['user'].role,
+      req.user.sub,
+      req.user.role,
     );
   }
 
@@ -132,8 +132,11 @@ export class PartidosController {
    */
   @Roles(Role.ADMIN, Role.MANAGER, Role.USER)
   @Delete(':id')
-  async remove(@Param('id', ParseIntPipe) id: number, @Req() req: Request) {
-    await this.partidosService.remove(id, req['user'].sub, req['user'].role);
+  async remove(
+    @Param('id', ParseIntPipe) id: number,
+    @Req() req: RequestWithUser,
+  ) {
+    await this.partidosService.remove(id, req.user.sub, req.user.role);
     return { message: 'Partido eliminado correctamente' };
   }
 }

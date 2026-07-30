@@ -46,15 +46,15 @@ export class InscripcionesService {
     if (!inscripcion) return inscripcion;
 
     if (inscripcion.user) {
-      delete (inscripcion.user as any).password;
+      delete (inscripcion.user as { password?: string }).password;
     }
 
     if (inscripcion.torneo && inscripcion.torneo.user) {
-      delete (inscripcion.torneo.user as any).password;
+      delete (inscripcion.torneo.user as { password?: string }).password;
     }
 
     if (inscripcion.equipo && inscripcion.equipo.user) {
-      delete (inscripcion.equipo.user as any).password;
+      delete (inscripcion.equipo.user as { password?: string }).password;
     }
 
     return inscripcion;

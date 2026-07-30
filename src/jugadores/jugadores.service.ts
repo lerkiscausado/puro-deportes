@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Jugador } from './jugador.entity';
@@ -50,7 +54,9 @@ export class JugadoresService {
     limit?: number;
     search?: string;
     gender?: string;
-  }): Promise<Jugador[] | { data: Jugador[]; total: number; page: number; limit: number }> {
+  }): Promise<
+    Jugador[] | { data: Jugador[]; total: number; page: number; limit: number }
+  > {
     const { page, limit = 15, search, gender } = query || {};
 
     const queryBuilder = this.jugadoresRepository.createQueryBuilder('jugador');

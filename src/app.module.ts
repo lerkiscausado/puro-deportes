@@ -1,6 +1,8 @@
 import { Module } from '@nestjs/common';
+import { APP_GUARD } from '@nestjs/core';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { ThrottlerModule } from '@nestjs/throttler';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { UsersModule } from './users/users.module';
@@ -14,25 +16,52 @@ import { InscripcionesModule } from './inscripciones/inscripciones.module';
 import { PlanillasModule } from './planillas/planillas.module';
 import { PartidoPeriodosModule } from './partidoperiodos/partidoperiodos.module';
 import { NoticiasModule } from './noticias/noticias.module';
+import { CustomThrottlerGuard } from './common/guards/custom-throttler.guard';
 
 @Module({
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
     }),
+    // ── Rate limiting global ────────────────────────────────────────────
+    // Protege TODOS los endpoints: máximo 100 peticiones por minuto por IP.
+    // Los endpoints de autenticación tienen límites más estrictos definidos
+    // con @Throttle() directamente en users.controller.ts.
+    ThrottlerModule.forRoot([
+      {
+        name: 'global',
+        ttl: 60000, // ventana de tiempo en ms (1 minuto)
+        limit: 100, // máximo de peticiones por IP en esa ventana
+      },
+    ]),
     TypeOrmModule.forRootAsync({
       imports: [ConfigModule],
-      useFactory: (configService: ConfigService) => ({
-        type: 'mysql',
-        host: configService.get<string>('DB_HOST'),
-        port: configService.get<number>('DB_PORT', 3306),
-        username: configService.get<string>('DB_USERNAME'),
-        password: configService.get<string>('DB_PASSWORD'),
-        database: configService.get<string>('DB_DATABASE'),
-        entities: [],
-        synchronize: true, // Nota: usar false en producción
-        autoLoadEntities: true,
-      }),
+      useFactory: (configService: ConfigService) => {
+        const nodeEnv = configService.get<string>('NODE_ENV', 'development');
+        const isDevelopment = nodeEnv === 'development';
+
+        return {
+          type: 'mysql',
+          host: configService.get<string>('DB_HOST'),
+          port: configService.get<number>('DB_PORT', 3306),
+          username: configService.get<string>('DB_USERNAME'),
+          password: configService.get<string>('DB_PASSWORD'),
+          database: configService.get<string>('DB_DATABASE'),
+          entities: [],
+          autoLoadEntities: true,
+
+          // Solo sincroniza automáticamente en desarrollo local.
+          // En staging/producción usa `npm run migration:run` antes de arrancar.
+          synchronize: isDevelopment,
+
+          // Ruta a los archivos de migración (TypeScript en dev, JS en prod).
+          migrations: [__dirname + '/../migrations/*{.ts,.js}'],
+
+          // Las migraciones NO se corren automáticamente al arrancar.
+          // Deben ejecutarse de forma explícita como paso del despliegue.
+          migrationsRun: false,
+        };
+      },
       inject: [ConfigService],
     }),
     UsersModule,
@@ -48,6 +77,14 @@ import { NoticiasModule } from './noticias/noticias.module';
     NoticiasModule,
   ],
   controllers: [AppController],
-  providers: [AppService],
+  providers: [
+    AppService,
+    // Registra el guard de rate limiting como guard global para toda la app.
+    // Los endpoints que necesiten límites distintos usan @Throttle() localmente.
+    {
+      provide: APP_GUARD,
+      useClass: CustomThrottlerGuard,
+    },
+  ],
 })
 export class AppModule {}

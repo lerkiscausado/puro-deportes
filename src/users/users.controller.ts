@@ -7,7 +7,8 @@ import {
   Req,
   UseGuards,
 } from '@nestjs/common';
-import type { Request } from 'express';
+import { Throttle } from '@nestjs/throttler';
+import type { RequestWithUser } from '../common/interfaces/request-with-user.interface';
 import { UsersService } from './users.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { LoginUserDto } from './dto/login-user.dto';
@@ -33,9 +34,13 @@ export class UsersController {
    * los valida automáticamente usando CreateUserDto,
    * y delega la lógica de negocio al UsersService.
    *
+   * Límite de rate limiting: 3 intentos por minuto por IP (más restrictivo
+   * que el global de 100/min) para mitigar registros masivos automatizados.
+   *
    * @param createUserDto - Datos del usuario validados (email, phone, password, name)
    * @returns El usuario creado sin el campo password
    */
+  @Throttle({ global: { limit: 3, ttl: 60000 } })
   @Post('register')
   async register(@Body() createUserDto: CreateUserDto) {
     return this.usersService.register(createUserDto);
@@ -49,9 +54,13 @@ export class UsersController {
    * verifica las credenciales contra la base de datos,
    * y retorna un token JWT si son correctas.
    *
+   * Límite de rate limiting: 5 intentos por minuto por IP (más restrictivo
+   * que el global de 100/min) para mitigar ataques de fuerza bruta.
+   *
    * @param loginUserDto - Credenciales del usuario (email, password)
    * @returns Objeto con access_token JWT y datos del usuario
    */
+  @Throttle({ global: { limit: 5, ttl: 60000 } })
   @Post('login')
   async login(@Body() loginUserDto: LoginUserDto) {
     return this.usersService.login(loginUserDto);
@@ -72,9 +81,9 @@ export class UsersController {
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(Role.ADMIN, Role.MANAGER, Role.USER)
   @Get('profile')
-  async getProfile(@Req() req: Request) {
-    // req['user'].sub contiene el ID del usuario extraído del token JWT
-    return this.usersService.findById(req['user'].sub);
+  async getProfile(@Req() req: RequestWithUser) {
+    // req.user.sub contiene el ID del usuario extraído del token JWT
+    return this.usersService.findById(req.user.sub);
   }
 
   /**
@@ -95,10 +104,10 @@ export class UsersController {
   @Roles(Role.ADMIN, Role.MANAGER, Role.USER)
   @Patch('profile')
   async updateProfile(
-    @Req() req: Request,
+    @Req() req: RequestWithUser,
     @Body() updateProfileDto: UpdateProfileDto,
   ) {
-    return this.usersService.updateProfile(req['user'].sub, updateProfileDto);
+    return this.usersService.updateProfile(req.user.sub, updateProfileDto);
   }
 
   /**
@@ -113,7 +122,7 @@ export class UsersController {
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(Role.ADMIN)
   @Get('admin/dashboard')
-  async adminDashboard() {
+  adminDashboard() {
     return { message: 'Bienvenido al panel de administración' };
   }
 
@@ -129,7 +138,7 @@ export class UsersController {
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(Role.ADMIN, Role.MANAGER)
   @Get('management')
-  async management() {
+  management() {
     return { message: 'Bienvenido al panel de gestión' };
   }
 }

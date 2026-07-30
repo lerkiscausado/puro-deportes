@@ -44,15 +44,15 @@ export class PlanillasService {
     if (!planilla) return planilla;
 
     if (planilla.user) {
-      delete (planilla.user as any).password;
+      delete (planilla.user as { password?: string }).password;
     }
 
     if (planilla.torneo && planilla.torneo.user) {
-      delete (planilla.torneo.user as any).password;
+      delete (planilla.torneo.user as { password?: string }).password;
     }
 
     if (planilla.equipo && planilla.equipo.user) {
-      delete (planilla.equipo.user as any).password;
+      delete (planilla.equipo.user as { password?: string }).password;
     }
 
     return planilla;
@@ -247,8 +247,10 @@ export class PlanillasService {
       planilla.jugador = jugador;
     }
 
-    const checkTorneoId = idTorneo !== undefined ? idTorneo : planilla.torneo.id;
-    const checkJugadorId = idJugador !== undefined ? idJugador : planilla.jugador.id;
+    const checkTorneoId =
+      idTorneo !== undefined ? idTorneo : planilla.torneo.id;
+    const checkJugadorId =
+      idJugador !== undefined ? idJugador : planilla.jugador.id;
 
     // Verificar si el jugador ya está registrado de forma activa en cualquier otro equipo para este torneo
     const existenteEnTorneo = await this.planillasRepository.findOne({
@@ -264,8 +266,22 @@ export class PlanillasService {
     });
 
     if (existenteEnTorneo) {
-      const jugadorNombre = idJugador !== undefined ? (await this.jugadoresRepository.findOne({ where: { id: idJugador } }))?.nombre : planilla.jugador.nombre;
-      const jugadorApellidos = idJugador !== undefined ? (await this.jugadoresRepository.findOne({ where: { id: idJugador } }))?.apellidos : planilla.jugador.apellidos;
+      const jugadorNombre =
+        idJugador !== undefined
+          ? (
+              await this.jugadoresRepository.findOne({
+                where: { id: idJugador },
+              })
+            )?.nombre
+          : planilla.jugador.nombre;
+      const jugadorApellidos =
+        idJugador !== undefined
+          ? (
+              await this.jugadoresRepository.findOne({
+                where: { id: idJugador },
+              })
+            )?.apellidos
+          : planilla.jugador.apellidos;
       throw new BadRequestException(
         `El jugador "${jugadorNombre} ${jugadorApellidos}" ya está registrado y activo en el torneo bajo el equipo "${existenteEnTorneo.equipo.nombre}".`,
       );

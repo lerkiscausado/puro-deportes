@@ -9,6 +9,8 @@ import { Role } from '../enums/role.enum';
 import { ROLES_KEY } from '../decorators/roles.decorator';
 import { IS_PUBLIC_KEY } from '../decorators/public.decorator';
 
+import { RequestWithUser } from '../../common/interfaces/request-with-user.interface';
+
 /**
  * Guard de autorización por roles.
  * Verifica que el usuario autenticado tenga uno de los roles
@@ -50,7 +52,12 @@ export class RolesGuard implements CanActivate {
     }
 
     // Obtiene el usuario del request (adjuntado por JwtAuthGuard)
-    const { user } = context.switchToHttp().getRequest();
+    const request = context.switchToHttp().getRequest<RequestWithUser>();
+    const user = request.user;
+
+    if (!user) {
+      return false;
+    }
 
     // Verifica si el rol del usuario está en la lista de roles permitidos
     const hasRole = requiredRoles.some((role) => user.role === role);

@@ -17,7 +17,14 @@ import { Inscripcion } from '../inscripciones/inscripcion.entity';
  */
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Partido, User, Torneo, Equipo, Escenario, Inscripcion]),
+    TypeOrmModule.forFeature([
+      Partido,
+      User,
+      Torneo,
+      Equipo,
+      Escenario,
+      Inscripcion,
+    ]),
     JwtModule.registerAsync({
       imports: [ConfigModule],
       inject: [ConfigService],

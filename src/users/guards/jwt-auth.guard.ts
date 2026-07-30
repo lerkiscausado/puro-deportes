@@ -9,6 +9,8 @@ import { Reflector } from '@nestjs/core';
 import { Request } from 'express';
 import { IS_PUBLIC_KEY } from '../decorators/public.decorator';
 
+import { RequestWithUser } from '../../common/interfaces/request-with-user.interface';
+
 /**
  * Guard de autenticación JWT.
  * Protege las rutas que requieren que el usuario esté autenticado.
@@ -50,10 +52,12 @@ export class JwtAuthGuard implements CanActivate {
 
     try {
       // Verifica y decodifica el token JWT
-      const payload = await this.jwtService.verifyAsync(token);
+      const payload = (await this.jwtService.verifyAsync(
+        token,
+      )) as unknown as RequestWithUser['user'];
 
       // Adjunta el payload al request para que esté disponible en el controlador
-      request['user'] = payload;
+      (request as RequestWithUser).user = payload;
     } catch {
       throw new UnauthorizedException(
         'Token de autenticación inválido o expirado',

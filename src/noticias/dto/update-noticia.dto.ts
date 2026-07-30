@@ -27,7 +27,8 @@ export class UpdateNoticiaDto {
   /** Deporte de la noticia - opcional */
   @IsOptional()
   @IsEnum(DeporteNoticia, {
-    message: 'El deporte debe ser uno de los siguientes: Futbol, Baloncesto o Voleibol.',
+    message:
+      'El deporte debe ser uno de los siguientes: Futbol, Baloncesto o Voleibol.',
   })
   deporte?: DeporteNoticia;
 }

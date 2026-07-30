@@ -186,7 +186,9 @@ export class TorneosService {
    *     femenino: [...]
    *     mixto: [...]
    */
-  async findPublicGrouped(): Promise<any> {
+  async findPublicGrouped(): Promise<{
+    deportes: Record<string, Record<string, Torneo[]>>;
+  }> {
     const torneos = await this.torneosRepository.find({
       where: {
         estado: Not(EstadoTorneo.FINALIZADO),
@@ -194,7 +196,7 @@ export class TorneosService {
     });
 
     // Estructura base requerida pre-inicializada
-    const result: any = {
+    const result: { deportes: Record<string, Record<string, Torneo[]>> } = {
       deportes: {
         baloncesto: {
           masculino: [],
@@ -214,17 +216,17 @@ export class TorneosService {
 
     // Mapeo de enums a las claves correspondientes en la respuesta
     const sportKeyMap: Record<string, string> = {
-      'Baloncesto': 'baloncesto',
-      'Futbol': 'futbol',
-      'Voleibol': 'volibol',
-      'Microfutbol': 'microfutbol',
-      'Golito': 'golito',
+      Baloncesto: 'baloncesto',
+      Futbol: 'futbol',
+      Voleibol: 'volibol',
+      Microfutbol: 'microfutbol',
+      Golito: 'golito',
     };
 
     const ramaKeyMap: Record<string, string> = {
-      'Masculino': 'masculino',
-      'Femenino': 'femenino',
-      'Mixto': 'mixto',
+      Masculino: 'masculino',
+      Femenino: 'femenino',
+      Mixto: 'mixto',
     };
 
     for (const torneo of torneos) {

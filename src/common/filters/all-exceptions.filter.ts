@@ -30,25 +30,34 @@ export class AllExceptionsFilter implements ExceptionFilter {
 
     // Obtiene la estructura del mensaje de error
     const exceptionResponse =
-      exception instanceof HttpException
-        ? exception.getResponse()
-        : null;
+      exception instanceof HttpException ? exception.getResponse() : null;
 
-    let message: any;
+    let message: unknown;
     if (exceptionResponse) {
-      message =
-        typeof exceptionResponse === 'object'
-          ? (exceptionResponse as any).message || exceptionResponse
-          : exceptionResponse;
+      if (typeof exceptionResponse === 'object' && exceptionResponse !== null) {
+        const responseObj = exceptionResponse as Record<string, unknown>;
+        message = responseObj.message ?? exceptionResponse;
+      } else {
+        message = exceptionResponse;
+      }
     } else {
       message =
-        exception instanceof Error ? exception.message : 'Error interno del servidor';
+        exception instanceof Error
+          ? exception.message
+          : 'Error interno del servidor';
+    }
+
+    let formattedMessage = '';
+    if (typeof message === 'object' && message !== null) {
+      formattedMessage = JSON.stringify(message);
+    } else if (typeof message === 'string') {
+      formattedMessage = message;
+    } else if (typeof message === 'number' || typeof message === 'boolean') {
+      formattedMessage = String(message);
     }
 
     // Registra el error en la consola usando el Logger de Nest
-    const logMessage = `${request.method} ${request.url} - Código: ${status} - Mensaje: ${
-      typeof message === 'object' ? JSON.stringify(message) : message
-    }`;
+    const logMessage = `${request.method} ${request.url} - Código: ${status} - Mensaje: ${formattedMessage}`;
 
     if (status >= 500) {
       // Registrar stack trace si es un error interno del servidor (5xx)

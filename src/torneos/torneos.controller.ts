@@ -14,7 +14,7 @@ import {
 import { FileFieldsInterceptor } from '@nestjs/platform-express';
 import { diskStorage } from 'multer';
 import { extname } from 'path';
-import type { Request } from 'express';
+import type { RequestWithUser } from '../common/interfaces/request-with-user.interface';
 import { TorneosService } from './torneos.service';
 import { CreateTorneoDto } from './dto/create-torneo.dto';
 import { UpdateTorneoDto } from './dto/update-torneo.dto';
@@ -23,14 +23,17 @@ import { RolesGuard } from '../users/guards/roles.guard';
 import { Roles } from '../users/decorators/roles.decorator';
 import { Role } from '../users/enums/role.enum';
 import { Public } from '../users/decorators/public.decorator';
+import { getUploadsPath } from '../common/utils/uploads-path.util';
 
 /**
  * Configuración de almacenamiento para archivos subidos.
- * Los archivos se guardan en la carpeta './uploads/torneos'
- * con un nombre único generado a partir de un timestamp.
+ * El directorio de destino se resuelve dinámicamente a partir de la variable
+ * de entorno UPLOADS_PATH (ver src/common/utils/uploads-path.util.ts).
  */
 const storageConfig = diskStorage({
-  destination: './uploads/torneos',
+  destination: (_req, _file, callback) => {
+    callback(null, getUploadsPath('torneos'));
+  },
   filename: (_req, file, callback) => {
     const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
     const ext = extname(file.originalname);
@@ -71,17 +74,20 @@ export class TorneosController {
         { name: 'foto', maxCount: 1 },
         { name: 'reglamento', maxCount: 1 },
       ],
-      { storage: storageConfig },
+      {
+        storage: storageConfig,
+        limits: { fileSize: 5 * 1024 * 1024 }, // 5 MB máximo por archivo
+      },
     ),
   )
   async create(
     @Body() createTorneoDto: CreateTorneoDto,
     @UploadedFiles()
     files: { foto?: Express.Multer.File[]; reglamento?: Express.Multer.File[] },
-    @Req() req: Request,
+    @Req() req: RequestWithUser,
   ) {
-    // req['user'].sub contiene el ID del usuario extraído del token JWT
-    return this.torneosService.create(createTorneoDto, req['user'].sub, files);
+    // req.user.sub contiene el ID del usuario extraído del token JWT
+    return this.torneosService.create(createTorneoDto, req.user.sub, files);
   }
 
   /**
@@ -122,8 +128,8 @@ export class TorneosController {
    */
   @Roles(Role.ADMIN, Role.MANAGER, Role.USER)
   @Get('mis-torneos')
-  async findMyTorneos(@Req() req: Request) {
-    return this.torneosService.findByUser(req['user'].sub);
+  async findMyTorneos(@Req() req: RequestWithUser) {
+    return this.torneosService.findByUser(req.user.sub);
   }
 
   /**
@@ -158,13 +164,13 @@ export class TorneosController {
   async update(
     @Param('id', ParseIntPipe) id: number,
     @Body() updateTorneoDto: UpdateTorneoDto,
-    @Req() req: Request,
+    @Req() req: RequestWithUser,
   ) {
     return this.torneosService.update(
       id,
       updateTorneoDto,
-      req['user'].sub,
-      req['user'].role,
+      req.user.sub,
+      req.user.role,
     );
   }
 }

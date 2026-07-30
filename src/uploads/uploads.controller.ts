@@ -14,6 +14,7 @@ import { JwtAuthGuard } from '../users/guards/jwt-auth.guard';
 import { RolesGuard } from '../users/guards/roles.guard';
 import { Roles } from '../users/decorators/roles.decorator';
 import { Role } from '../users/enums/role.enum';
+import { getUploadsPath } from '../common/utils/uploads-path.util';
 
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Controller('uploads')
@@ -24,7 +25,7 @@ export class UploadsController {
     FileInterceptor('logo', {
       storage: diskStorage({
         destination: (req, file, callback) => {
-          const dir = './uploads/logos';
+          const dir = getUploadsPath('logos');
           if (!fs.existsSync(dir)) {
             fs.mkdirSync(dir, { recursive: true });
           }
@@ -48,6 +49,7 @@ export class UploadsController {
         }
         callback(null, true);
       },
+      limits: { fileSize: 5 * 1024 * 1024 }, // 5 MB máximo
     }),
   )
   uploadLogo(@UploadedFile() file: Express.Multer.File) {

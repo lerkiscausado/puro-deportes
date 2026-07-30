@@ -1,0 +1,33 @@
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: production
+
+    # Carga todas las variables de entorno desde el archivo .env del VPS.
+    # En el VPS, este archivo debe estar en el mismo directorio que docker-compose.yml
+    # y NUNCA debe subirse al repositorio.
+    env_file:
+      - .env
+
+    ports:
+      # Mapea el puerto interno del contenedor al puerto del VPS.
+      # Ajusta el puerto externo (izquierda) si el 3000 ya está en uso en el VPS.
+      - "${PORT:-3000}:${PORT:-3000}"
+
+    volumes:
+      # Volumen persistente de uploads: los archivos escritos en /app/uploads dentro
+      # del contenedor se guardan en /data/puro-deportes/uploads en el VPS y
+      # sobreviven a cualquier rebuild o redeploy del contenedor.
+      # ⚠️  Crear este directorio en el VPS ANTES de levantar el servicio:
+      #     mkdir -p /data/puro-deportes/uploads && chown -R 1000:1000 /data/puro-deportes/uploads
+      - /data/puro-deportes/uploads:/app/uploads
+
+    extra_hosts:
+      # Permite que el contenedor resuelva "host.docker.internal" hacia la IP del host
+      # (el VPS donde corre el MySQL nativo). Requiere Docker >= 20.10.
+      # En el .env de producción usar DB_HOST=host.docker.internal (NO localhost).
+      - "host.docker.internal:host-gateway"
+
+    restart: unless-stopped

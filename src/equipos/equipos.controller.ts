@@ -10,7 +10,7 @@ import {
   Req,
   UseGuards,
 } from '@nestjs/common';
-import type { Request } from 'express';
+import type { RequestWithUser } from '../common/interfaces/request-with-user.interface';
 import { EquiposService } from './equipos.service';
 import { CreateEquipoDto } from './dto/create-equipo.dto';
 import { UpdateEquipoDto } from './dto/update-equipo.dto';
@@ -42,9 +42,12 @@ export class EquiposController {
    */
   @Roles(Role.ADMIN, Role.MANAGER, Role.USER)
   @Post()
-  async create(@Body() createEquipoDto: CreateEquipoDto, @Req() req: Request) {
-    // req['user'].sub contiene el ID del usuario extraído del token JWT
-    return this.equiposService.create(createEquipoDto, req['user'].sub);
+  async create(
+    @Body() createEquipoDto: CreateEquipoDto,
+    @Req() req: RequestWithUser,
+  ) {
+    // req.user.sub contiene el ID del usuario extraído del token JWT
+    return this.equiposService.create(createEquipoDto, req.user.sub);
   }
 
   /**
@@ -68,8 +71,8 @@ export class EquiposController {
    */
   @Roles(Role.ADMIN, Role.MANAGER, Role.USER)
   @Get('mis-equipos')
-  async findMyEquipos(@Req() req: Request) {
-    return this.equiposService.findByUser(req['user'].sub);
+  async findMyEquipos(@Req() req: RequestWithUser) {
+    return this.equiposService.findByUser(req.user.sub);
   }
 
   /**
@@ -99,13 +102,13 @@ export class EquiposController {
   async update(
     @Param('id', ParseIntPipe) id: number,
     @Body() updateEquipoDto: UpdateEquipoDto,
-    @Req() req: Request,
+    @Req() req: RequestWithUser,
   ) {
     return this.equiposService.update(
       id,
       updateEquipoDto,
-      req['user'].sub,
-      req['user'].role,
+      req.user.sub,
+      req.user.role,
     );
   }
 
@@ -119,8 +122,11 @@ export class EquiposController {
    */
   @Roles(Role.ADMIN, Role.MANAGER, Role.USER)
   @Delete(':id')
-  async remove(@Param('id', ParseIntPipe) id: number, @Req() req: Request) {
-    await this.equiposService.remove(id, req['user'].sub, req['user'].role);
+  async remove(
+    @Param('id', ParseIntPipe) id: number,
+    @Req() req: RequestWithUser,
+  ) {
+    await this.equiposService.remove(id, req.user.sub, req.user.role);
     return { message: 'Equipo eliminado correctamente' };
   }
 }

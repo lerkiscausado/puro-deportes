@@ -10,7 +10,7 @@ import {
   Req,
   UseGuards,
 } from '@nestjs/common';
-import type { Request } from 'express';
+import type { RequestWithUser } from '../common/interfaces/request-with-user.interface';
 import { EscenariosService } from './escenarios.service';
 import { CreateEscenarioDto } from './dto/create-escenario.dto';
 import { UpdateEscenarioDto } from './dto/update-escenario.dto';
@@ -44,10 +44,10 @@ export class EscenariosController {
   @Post()
   async create(
     @Body() createEscenarioDto: CreateEscenarioDto,
-    @Req() req: Request,
+    @Req() req: RequestWithUser,
   ) {
-    // req['user'].sub contiene el ID del usuario extraído del token JWT
-    return this.escenariosService.create(createEscenarioDto, req['user'].sub);
+    // req.user.sub contiene el ID del usuario extraído del token JWT
+    return this.escenariosService.create(createEscenarioDto, req.user.sub);
   }
 
   /**
@@ -71,8 +71,8 @@ export class EscenariosController {
    */
   @Roles(Role.ADMIN, Role.MANAGER, Role.USER)
   @Get('mis-escenarios')
-  async findMyEscenarios(@Req() req: Request) {
-    return this.escenariosService.findByUser(req['user'].sub);
+  async findMyEscenarios(@Req() req: RequestWithUser) {
+    return this.escenariosService.findByUser(req.user.sub);
   }
 
   /**
@@ -102,13 +102,13 @@ export class EscenariosController {
   async update(
     @Param('id', ParseIntPipe) id: number,
     @Body() updateEscenarioDto: UpdateEscenarioDto,
-    @Req() req: Request,
+    @Req() req: RequestWithUser,
   ) {
     return this.escenariosService.update(
       id,
       updateEscenarioDto,
-      req['user'].sub,
-      req['user'].role,
+      req.user.sub,
+      req.user.role,
     );
   }
 
@@ -122,8 +122,11 @@ export class EscenariosController {
    */
   @Roles(Role.ADMIN, Role.MANAGER, Role.USER)
   @Delete(':id')
-  async remove(@Param('id', ParseIntPipe) id: number, @Req() req: Request) {
-    await this.escenariosService.remove(id, req['user'].sub, req['user'].role);
+  async remove(
+    @Param('id', ParseIntPipe) id: number,
+    @Req() req: RequestWithUser,
+  ) {
+    await this.escenariosService.remove(id, req.user.sub, req.user.role);
     return { message: 'Escenario eliminado correctamente' };
   }
 }

@@ -15,7 +15,6 @@ import {
 import { FileInterceptor } from '@nestjs/platform-express';
 import { diskStorage } from 'multer';
 import { extname } from 'path';
-import * as fs from 'fs';
 import { NoticiasService } from './noticias.service';
 import { CreateNoticiaDto } from './dto/create-noticia.dto';
 import { UpdateNoticiaDto } from './dto/update-noticia.dto';
@@ -23,19 +22,16 @@ import { JwtAuthGuard } from '../users/guards/jwt-auth.guard';
 import { RolesGuard } from '../users/guards/roles.guard';
 import { Roles } from '../users/decorators/roles.decorator';
 import { Role } from '../users/enums/role.enum';
+import { getUploadsPath } from '../common/utils/uploads-path.util';
 
 /**
  * Configuración de almacenamiento para fotos de noticias.
- * Los archivos se guardan en la carpeta './uploads/noticias'
- * con un nombre único generado a partir de un timestamp.
+ * El directorio de destino se resuelve dinámicamente a partir de la variable
+ * de entorno UPLOADS_PATH (ver src/common/utils/uploads-path.util.ts).
  */
 const storageConfig = diskStorage({
-  destination: (req, file, callback) => {
-    const dir = './uploads/noticias';
-    if (!fs.existsSync(dir)) {
-      fs.mkdirSync(dir, { recursive: true });
-    }
-    callback(null, dir);
+  destination: (_req, _file, callback) => {
+    callback(null, getUploadsPath('noticias'));
   },
   filename: (_req, file, callback) => {
     const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
@@ -78,6 +74,7 @@ export class NoticiasController {
         }
         callback(null, true);
       },
+      limits: { fileSize: 5 * 1024 * 1024 }, // 5 MB máximo
     }),
   )
   async create(
@@ -134,6 +131,7 @@ export class NoticiasController {
         }
         callback(null, true);
       },
+      limits: { fileSize: 5 * 1024 * 1024 }, // 5 MB máximo
     }),
   )
   async update(

@@ -10,7 +10,7 @@ import {
   Req,
   UseGuards,
 } from '@nestjs/common';
-import type { Request } from 'express';
+import type { RequestWithUser } from '../common/interfaces/request-with-user.interface';
 import { InscripcionesService } from './inscripciones.service';
 import { CreateInscripcionDto } from './dto/create-inscripcion.dto';
 import { UpdateInscripcionDto } from './dto/update-inscripcion.dto';
@@ -42,12 +42,9 @@ export class InscripcionesController {
   @Post()
   async create(
     @Body() createInscripcionDto: CreateInscripcionDto,
-    @Req() req: Request,
+    @Req() req: RequestWithUser,
   ) {
-    return this.inscripcionesService.create(
-      createInscripcionDto,
-      req['user'].sub,
-    );
+    return this.inscripcionesService.create(createInscripcionDto, req.user.sub);
   }
 
   /**
@@ -71,8 +68,8 @@ export class InscripcionesController {
    */
   @Roles(Role.ADMIN, Role.MANAGER, Role.USER)
   @Get('mis-inscripciones')
-  async findMyInscripciones(@Req() req: Request) {
-    return this.inscripcionesService.findByUser(req['user'].sub);
+  async findMyInscripciones(@Req() req: RequestWithUser) {
+    return this.inscripcionesService.findByUser(req.user.sub);
   }
 
   /**
@@ -115,13 +112,13 @@ export class InscripcionesController {
   async update(
     @Param('id', ParseIntPipe) id: number,
     @Body() updateInscripcionDto: UpdateInscripcionDto,
-    @Req() req: Request,
+    @Req() req: RequestWithUser,
   ) {
     return this.inscripcionesService.update(
       id,
       updateInscripcionDto,
-      req['user'].sub,
-      req['user'].role,
+      req.user.sub,
+      req.user.role,
     );
   }
 
@@ -135,12 +132,11 @@ export class InscripcionesController {
    */
   @Roles(Role.ADMIN, Role.MANAGER, Role.USER)
   @Delete(':id')
-  async remove(@Param('id', ParseIntPipe) id: number, @Req() req: Request) {
-    await this.inscripcionesService.remove(
-      id,
-      req['user'].sub,
-      req['user'].role,
-    );
+  async remove(
+    @Param('id', ParseIntPipe) id: number,
+    @Req() req: RequestWithUser,
+  ) {
+    await this.inscripcionesService.remove(id, req.user.sub, req.user.role);
     return { message: 'Inscripción eliminada correctamente' };
   }
 }

@@ -13,17 +13,22 @@ export class CreateNoticiaDto {
 
   /** Subtítulo de la noticia - obligatorio */
   @IsString()
-  @IsNotEmpty({ message: 'El subtítulo es obligatorio y no puede estar vacío.' })
+  @IsNotEmpty({
+    message: 'El subtítulo es obligatorio y no puede estar vacío.',
+  })
   subtitulo: string;
 
   /** Descripción o contenido de la noticia - obligatorio */
   @IsString()
-  @IsNotEmpty({ message: 'La descripción es obligatoria y no puede estar vacía.' })
+  @IsNotEmpty({
+    message: 'La descripción es obligatoria y no puede estar vacía.',
+  })
   descripcion: string;
 
   /** Deporte al que pertenece la noticia - obligatorio */
   @IsEnum(DeporteNoticia, {
-    message: 'El deporte debe ser uno de los siguientes: Futbol, Baloncesto o Voleibol.',
+    message:
+      'El deporte debe ser uno de los siguientes: Futbol, Baloncesto o Voleibol.',
   })
   deporte: DeporteNoticia;
 }

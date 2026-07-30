@@ -59,23 +59,23 @@ export class PartidosService {
     if (!partido) return partido;
 
     if (partido.user) {
-      delete (partido.user as any).password;
+      delete (partido.user as { password?: string }).password;
     }
 
     if (partido.torneo && partido.torneo.user) {
-      delete (partido.torneo.user as any).password;
+      delete (partido.torneo.user as { password?: string }).password;
     }
 
     if (partido.equipoLocal && partido.equipoLocal.user) {
-      delete (partido.equipoLocal.user as any).password;
+      delete (partido.equipoLocal.user as { password?: string }).password;
     }
 
     if (partido.equipoVisitante && partido.equipoVisitante.user) {
-      delete (partido.equipoVisitante.user as any).password;
+      delete (partido.equipoVisitante.user as { password?: string }).password;
     }
 
     if (partido.escenario && partido.escenario.user) {
-      delete (partido.escenario.user as any).password;
+      delete (partido.escenario.user as { password?: string }).password;
     }
 
     return partido;
@@ -491,7 +491,12 @@ export class PartidosService {
     let ptsPerdido = 0;
 
     const dep = torneo.deporte ? torneo.deporte.toLowerCase() : '';
-    if (dep.includes('basket') || dep.includes('baloncesto') || dep.includes('voley') || dep.includes('voleibol')) {
+    if (
+      dep.includes('basket') ||
+      dep.includes('baloncesto') ||
+      dep.includes('voley') ||
+      dep.includes('voleibol')
+    ) {
       ptsGanado = 2;
       ptsEmpatado = 0;
       ptsPerdido = 1;
@@ -511,8 +516,12 @@ export class PartidosService {
     for (const partido of partidosFinalizados) {
       if (!partido.equipoLocal || !partido.equipoVisitante) continue;
 
-      const localInsc = inscripciones.find((i) => i.equipo.id === partido.equipoLocal.id);
-      const visitanteInsc = inscripciones.find((i) => i.equipo.id === partido.equipoVisitante.id);
+      const localInsc = inscripciones.find(
+        (i) => i.equipo.id === partido.equipoLocal.id,
+      );
+      const visitanteInsc = inscripciones.find(
+        (i) => i.equipo.id === partido.equipoVisitante.id,
+      );
 
       if (localInsc && visitanteInsc) {
         const scoreLocal = partido.local ?? 0;

@@ -10,7 +10,7 @@ import {
   Req,
   UseGuards,
 } from '@nestjs/common';
-import type { Request } from 'express';
+import type { RequestWithUser } from '../common/interfaces/request-with-user.interface';
 import { PartidoPeriodosService } from './partidoperiodos.service';
 import { CreatePartidoPeriodoDto } from './dto/create-partidoperiodo.dto';
 import { UpdatePartidoPeriodoDto } from './dto/update-partidoperiodo.dto';
@@ -28,9 +28,9 @@ export class PartidoPeriodosController {
   @Post()
   async create(
     @Body() createDto: CreatePartidoPeriodoDto,
-    @Req() req: Request,
+    @Req() req: RequestWithUser,
   ) {
-    return this.service.create(createDto, req['user'].sub);
+    return this.service.create(createDto, req.user.sub);
   }
 
   @Roles(Role.ADMIN, Role.MANAGER, Role.USER)
@@ -56,20 +56,18 @@ export class PartidoPeriodosController {
   async update(
     @Param('id', ParseIntPipe) id: number,
     @Body() updateDto: UpdatePartidoPeriodoDto,
-    @Req() req: Request,
+    @Req() req: RequestWithUser,
   ) {
-    return this.service.update(
-      id,
-      updateDto,
-      req['user'].sub,
-      req['user'].role,
-    );
+    return this.service.update(id, updateDto, req.user.sub, req.user.role);
   }
 
   @Roles(Role.ADMIN, Role.MANAGER, Role.USER)
   @Delete(':id')
-  async remove(@Param('id', ParseIntPipe) id: number, @Req() req: Request) {
-    await this.service.remove(id, req['user'].sub, req['user'].role);
+  async remove(
+    @Param('id', ParseIntPipe) id: number,
+    @Req() req: RequestWithUser,
+  ) {
+    await this.service.remove(id, req.user.sub, req.user.role);
     return { message: 'Periodo de partido eliminado correctamente' };
   }
 }

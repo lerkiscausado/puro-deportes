@@ -10,7 +10,7 @@ import {
   Req,
   UseGuards,
 } from '@nestjs/common';
-import type { Request } from 'express';
+import type { RequestWithUser } from '../common/interfaces/request-with-user.interface';
 import { PlanillasService } from './planillas.service';
 import { CreatePlanillaDto } from './dto/create-planilla.dto';
 import { UpdatePlanillaDto } from './dto/update-planilla.dto';
@@ -42,9 +42,9 @@ export class PlanillasController {
   @Post()
   async create(
     @Body() createPlanillaDto: CreatePlanillaDto,
-    @Req() req: Request,
+    @Req() req: RequestWithUser,
   ) {
-    return this.planillasService.create(createPlanillaDto, req['user'].sub);
+    return this.planillasService.create(createPlanillaDto, req.user.sub);
   }
 
   /**
