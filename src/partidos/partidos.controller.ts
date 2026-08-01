@@ -18,6 +18,7 @@ import { JwtAuthGuard } from '../users/guards/jwt-auth.guard';
 import { RolesGuard } from '../users/guards/roles.guard';
 import { Roles } from '../users/decorators/roles.decorator';
 import { Role } from '../users/enums/role.enum';
+import { Public } from '../users/decorators/public.decorator';
 
 /**
  * Controlador de partidos.
@@ -83,6 +84,26 @@ export class PartidosController {
   @Get('torneo/:torneoId')
   async findByTorneo(@Param('torneoId', ParseIntPipe) torneoId: number) {
     return this.partidosService.findByTorneo(torneoId);
+  }
+
+  /**
+   * Endpoint público para obtener la programación de partidos.
+   * Ruta: GET /partidos/programacion
+   */
+  @Public()
+  @Get('programacion')
+  async findPublicProgramados() {
+    return this.partidosService.findPublicProgramados();
+  }
+
+  /**
+   * Endpoint público para obtener los resultados de partidos finalizados.
+   * Ruta: GET /partidos/resultados
+   */
+  @Public()
+  @Get('resultados')
+  async findPublicFinalizados() {
+    return this.partidosService.findPublicFinalizados();
   }
 
   /**

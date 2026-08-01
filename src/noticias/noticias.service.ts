@@ -48,6 +48,20 @@ export class NoticiasService {
   }
 
   /**
+   * Obtiene las noticias públicas más recientes (máximo 30).
+   *
+   * @returns Lista de noticias ordenadas por fecha de creación descendente
+   */
+  async findPublicAll(): Promise<Noticia[]> {
+    return this.noticiasRepository.find({
+      order: {
+        createdAt: 'DESC',
+      },
+      take: 30,
+    });
+  }
+
+  /**
    * Obtiene una noticia específica por su ID.
    *
    * @param id - ID de la noticia a buscar

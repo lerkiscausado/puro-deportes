@@ -22,6 +22,7 @@ import { JwtAuthGuard } from '../users/guards/jwt-auth.guard';
 import { RolesGuard } from '../users/guards/roles.guard';
 import { Roles } from '../users/decorators/roles.decorator';
 import { Role } from '../users/enums/role.enum';
+import { Public } from '../users/decorators/public.decorator';
 import { getUploadsPath } from '../common/utils/uploads-path.util';
 
 /**
@@ -94,6 +95,16 @@ export class NoticiasController {
   @Get()
   async findAll() {
     return this.noticiasService.findAll();
+  }
+
+  /**
+   * Endpoint público para obtener las noticias más recientes.
+   * Ruta: GET /noticias/public
+   */
+  @Public()
+  @Get('public')
+  async findPublicAll() {
+    return this.noticiasService.findPublicAll();
   }
 
   /**

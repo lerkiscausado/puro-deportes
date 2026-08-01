@@ -82,6 +82,86 @@ export class PartidosService {
   }
 
   /**
+   * Sanea un partido para la API pública eliminando por completo la relación user
+   * de la entidad principal y de cualquier entidad relacionada (torneo, equipoLocal, equipoVisitante, escenario).
+   */
+  private sanitizePublicPartido(partido: Partido): Partido {
+    if (!partido) return partido;
+
+    delete (partido as { user?: any }).user;
+
+    if (partido.torneo) {
+      delete (partido.torneo as { user?: any }).user;
+      if (partido.torneo.escenario) {
+        delete (partido.torneo.escenario as { user?: any }).user;
+      }
+    }
+
+    if (partido.equipoLocal) {
+      delete (partido.equipoLocal as { user?: any }).user;
+    }
+
+    if (partido.equipoVisitante) {
+      delete (partido.equipoVisitante as { user?: any }).user;
+    }
+
+    if (partido.escenario) {
+      delete (partido.escenario as { user?: any }).user;
+    }
+
+    return partido;
+  }
+
+  /**
+   * Obtiene la programación pública de partidos (estado PROGRAMADO),
+   * ordenados por fecha y hora ascendente.
+   *
+   * @returns Lista de partidos programados sin información de usuarios creadores
+   */
+  async findPublicProgramados(): Promise<Partido[]> {
+    const partidos = await this.partidosRepository.find({
+      where: { estado: EstadoPartido.PROGRAMADO },
+      relations: {
+        torneo: true,
+        equipoLocal: true,
+        equipoVisitante: true,
+        escenario: true,
+      },
+      order: {
+        fecha: 'ASC',
+        hora: 'ASC',
+      },
+    });
+
+    return partidos.map((p) => this.sanitizePublicPartido(p));
+  }
+
+  /**
+   * Obtiene los resultados públicos de partidos (estado FINALIZADO),
+   * ordenados por fecha y hora descendente (máximo 50).
+   *
+   * @returns Lista de los últimos 50 partidos finalizados sin información de usuarios creadores
+   */
+  async findPublicFinalizados(): Promise<Partido[]> {
+    const partidos = await this.partidosRepository.find({
+      where: { estado: EstadoPartido.FINALIZADO },
+      relations: {
+        torneo: true,
+        equipoLocal: true,
+        equipoVisitante: true,
+        escenario: true,
+      },
+      order: {
+        fecha: 'DESC',
+        hora: 'DESC',
+      },
+      take: 50,
+    });
+
+    return partidos.map((p) => this.sanitizePublicPartido(p));
+  }
+
+  /**
    * Verifica que ni el equipo local ni el equipo visitante tengan otro partido programado
    * en el mismo torneo en la misma fecha y hora.
    */
