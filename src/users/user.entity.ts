@@ -32,7 +32,7 @@ export class User {
   phone: string;
 
   /** Contraseña del usuario (almacenada con hash bcrypt) */
-  @Column()
+  @Column({ select: false })
   password: string;
 
   /** Nombre completo del usuario */

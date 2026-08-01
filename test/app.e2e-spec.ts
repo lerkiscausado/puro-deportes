@@ -34,4 +34,15 @@ describe('AppController (e2e)', () => {
       .send({})
       .expect(400);
   });
+
+  it('GET /api/torneos/public → 200 y NO debe exponer datos sensibles (password, email, phone) en la respuesta', async () => {
+    const response = await request(app.getHttpServer())
+      .get('/api/torneos/public')
+      .expect(200);
+
+    const jsonString = JSON.stringify(response.body);
+    expect(jsonString).not.toContain('password');
+    expect(jsonString).not.toContain('email');
+    expect(jsonString).not.toContain('phone');
+  });
 });

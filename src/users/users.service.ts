@@ -87,10 +87,12 @@ export class UsersService {
   async login(
     loginUserDto: LoginUserDto,
   ): Promise<{ access_token: string; user: Omit<User, 'password'> }> {
-    // Busca el usuario por email
-    const user = await this.usersRepository.findOne({
-      where: { email: loginUserDto.email },
-    });
+    // Busca el usuario por email incluyendo la columna password (excluida por defecto)
+    const user = await this.usersRepository
+      .createQueryBuilder('user')
+      .addSelect('user.password')
+      .where('user.email = :email', { email: loginUserDto.email })
+      .getOne();
 
     // Si el email no está registrado, lanza excepción 401
     if (!user) {

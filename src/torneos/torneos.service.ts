@@ -97,7 +97,9 @@ export class TorneosService {
    * @returns Lista de torneos con los datos del usuario creador
    */
   async findAll(): Promise<Torneo[]> {
-    return this.torneosRepository.find();
+    return this.torneosRepository.find({
+      relations: { user: true, escenario: true },
+    });
   }
 
   /**
@@ -108,7 +110,10 @@ export class TorneosService {
    * @throws NotFoundException si el torneo no existe
    */
   async findOne(id: number): Promise<Torneo> {
-    const torneo = await this.torneosRepository.findOne({ where: { id } });
+    const torneo = await this.torneosRepository.findOne({
+      where: { id },
+      relations: { user: true, escenario: true },
+    });
 
     if (!torneo) {
       throw new NotFoundException(`Torneo con ID ${id} no encontrado`);
@@ -126,6 +131,7 @@ export class TorneosService {
   async findByUser(userId: number): Promise<Torneo[]> {
     return this.torneosRepository.find({
       where: { user: { id: userId } },
+      relations: { user: true, escenario: true },
     });
   }
 

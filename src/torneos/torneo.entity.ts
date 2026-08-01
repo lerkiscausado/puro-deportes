@@ -75,9 +75,8 @@ export class Torneo {
   /**
    * Relación ManyToOne con la entidad User.
    * Representa al usuario que creó/administra el torneo.
-   * eager: true carga automáticamente los datos del usuario al consultar el torneo.
    */
-  @ManyToOne(() => User, (user) => user.torneos, { eager: true })
+  @ManyToOne(() => User, (user) => user.torneos, { eager: false })
   @JoinColumn({ name: 'idUser' })
   user: User;
 
