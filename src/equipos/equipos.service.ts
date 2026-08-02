@@ -5,11 +5,14 @@ import {
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import * as fs from 'fs';
+import { join } from 'path';
 import { Equipo } from './equipo.entity';
 import { CreateEquipoDto } from './dto/create-equipo.dto';
 import { UpdateEquipoDto } from './dto/update-equipo.dto';
 import { User } from '../users/user.entity';
 import { Role } from '../users/enums/role.enum';
+import { getUploadsPath } from '../common/utils/uploads-path.util';
 
 /**
  * Servicio de equipos.
@@ -135,6 +138,7 @@ export class EquiposService {
    * @param updateEquipoDto - Campos a modificar
    * @param userId - ID del usuario que solicita la actualización
    * @param userRole - Rol del usuario solicitante
+   * @param file - Archivo de imagen subido si se reemplaza la foto (opcional)
    * @returns El equipo actualizado
    */
   async update(
@@ -142,6 +146,7 @@ export class EquiposService {
     updateEquipoDto: UpdateEquipoDto,
     userId: number,
     userRole: Role,
+    file?: Express.Multer.File,
   ): Promise<Equipo> {
     const equipo = await this.findOne(id);
 
@@ -152,11 +157,33 @@ export class EquiposService {
       );
     }
 
+    const { foto: dtoFoto, ...restDto } = updateEquipoDto;
+
+    let fotoActualizada = equipo.foto;
+
+    if (file?.filename) {
+      // Si el equipo ya tenía una foto previa guardada, elimina la foto anterior del disco
+      if (equipo.foto) {
+        const oldPath = join(getUploadsPath('equipos'), equipo.foto);
+        try {
+          if (fs.existsSync(oldPath)) {
+            fs.unlinkSync(oldPath);
+          }
+        } catch {
+          // Ignorar silenciosamente si no se pudo eliminar la imagen previa
+        }
+      }
+      fotoActualizada = file.filename;
+    } else if (dtoFoto !== undefined && dtoFoto !== null && dtoFoto !== '') {
+      fotoActualizada = dtoFoto;
+    }
+
     // Mezcla las propiedades actualizadas
     const equipoActualizado = this.equiposRepository.merge(
       equipo,
-      updateEquipoDto,
+      restDto,
     );
+    equipoActualizado.foto = fotoActualizada;
 
     await this.equiposRepository.save(equipoActualizado);
     return this.findOne(id);

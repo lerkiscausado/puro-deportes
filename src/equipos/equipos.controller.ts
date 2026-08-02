@@ -43,6 +43,25 @@ const storageConfig = diskStorage({
 });
 
 /**
+ * Opciones para el FileInterceptor de foto de equipo.
+ */
+const equipoFotoInterceptorOptions = {
+  storage: storageConfig,
+  fileFilter: (_req: any, file: Express.Multer.File, callback: any) => {
+    if (!file.originalname.match(/\.(jpg|jpeg|png|gif|webp)$/)) {
+      return callback(
+        new BadRequestException(
+          'Solo se permiten archivos de imagen (jpg, jpeg, png, gif, webp).',
+        ),
+        false,
+      );
+    }
+    callback(null, true);
+  },
+  limits: { fileSize: 5 * 1024 * 1024 }, // 5 MB máximo
+};
+
+/**
  * Controlador de equipos.
  * Define los endpoints HTTP bajo la ruta /equipos.
  *
@@ -68,23 +87,7 @@ export class EquiposController {
    */
   @Roles(Role.ADMIN, Role.MANAGER, Role.USER)
   @Post()
-  @UseInterceptors(
-    FileInterceptor('foto', {
-      storage: storageConfig,
-      fileFilter: (_req, file, callback) => {
-        if (!file.originalname.match(/\.(jpg|jpeg|png|gif|webp)$/)) {
-          return callback(
-            new BadRequestException(
-              'Solo se permiten archivos de imagen (jpg, jpeg, png, gif, webp).',
-            ),
-            false,
-          );
-        }
-        callback(null, true);
-      },
-      limits: { fileSize: 5 * 1024 * 1024 }, // 5 MB máximo
-    }),
-  )
+  @UseInterceptors(FileInterceptor('foto', equipoFotoInterceptorOptions))
   async create(
     @Body() createEquipoDto: CreateEquipoDto,
     @Req() req: RequestWithUser,
@@ -136,23 +139,29 @@ export class EquiposController {
    * Endpoint para actualizar parcialmente un equipo por su ID.
    * Ruta: PATCH /equipos/:id
    *
+   * Acepta subida multipart/form-data para actualizar el archivo del campo "foto".
+   *
    * @param id - ID del equipo a actualizar
    * @param updateEquipoDto - Nuevos datos del equipo
    * @param req - Objeto request con el payload del JWT
+   * @param file - Archivo de imagen subido si se reemplaza la foto (opcional)
    * @returns El equipo modificado
    */
   @Roles(Role.ADMIN, Role.MANAGER, Role.USER)
   @Patch(':id')
+  @UseInterceptors(FileInterceptor('foto', equipoFotoInterceptorOptions))
   async update(
     @Param('id', ParseIntPipe) id: number,
     @Body() updateEquipoDto: UpdateEquipoDto,
     @Req() req: RequestWithUser,
+    @UploadedFile() file?: Express.Multer.File,
   ) {
     return this.equiposService.update(
       id,
       updateEquipoDto,
       req.user.sub,
       req.user.role,
+      file,
     );
   }
 
