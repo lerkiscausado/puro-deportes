@@ -56,11 +56,13 @@ export class EquiposService {
    *
    * @param createEquipoDto - Datos para la creación del equipo
    * @param userId - ID del usuario autenticado que lo registra
+   * @param file - Archivo de imagen subido para el escudo/foto (opcional)
    * @returns El equipo creado con la relación al usuario
    */
   async create(
     createEquipoDto: CreateEquipoDto,
     userId: number,
+    file?: Express.Multer.File,
   ): Promise<Equipo> {
     const user = await this.usersRepository.findOne({ where: { id: userId } });
 
@@ -70,6 +72,7 @@ export class EquiposService {
 
     const equipo = this.equiposRepository.create({
       ...createEquipoDto,
+      foto: file?.filename ?? createEquipoDto.foto,
       user,
     });
 

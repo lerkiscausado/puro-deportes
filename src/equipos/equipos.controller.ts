@@ -9,7 +9,13 @@ import {
   Post,
   Req,
   UseGuards,
+  UseInterceptors,
+  UploadedFile,
+  BadRequestException,
 } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
+import { diskStorage } from 'multer';
+import { extname } from 'path';
 import type { RequestWithUser } from '../common/interfaces/request-with-user.interface';
 import { EquiposService } from './equipos.service';
 import { CreateEquipoDto } from './dto/create-equipo.dto';
@@ -18,6 +24,23 @@ import { JwtAuthGuard } from '../users/guards/jwt-auth.guard';
 import { RolesGuard } from '../users/guards/roles.guard';
 import { Roles } from '../users/decorators/roles.decorator';
 import { Role } from '../users/enums/role.enum';
+import { getUploadsPath } from '../common/utils/uploads-path.util';
+
+/**
+ * Configuración de almacenamiento para fotos/escudos de equipos.
+ * El directorio de destino se resuelve dinámicamente a partir de la variable
+ * de entorno UPLOADS_PATH (ver src/common/utils/uploads-path.util.ts).
+ */
+const storageConfig = diskStorage({
+  destination: (_req, _file, callback) => {
+    callback(null, getUploadsPath('equipos'));
+  },
+  filename: (_req, file, callback) => {
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
+    const ext = extname(file.originalname);
+    callback(null, `${file.fieldname}-${uniqueSuffix}${ext}`);
+  },
+});
 
 /**
  * Controlador de equipos.
@@ -36,18 +59,39 @@ export class EquiposController {
    * Endpoint para registrar un nuevo equipo deportivo.
    * Ruta: POST /equipos
    *
+   * Acepta subida multipart/form-data para el archivo del campo "foto".
+   *
    * @param createEquipoDto - Datos del equipo a crear
    * @param req - Objeto request con el payload del JWT
+   * @param file - Archivo de imagen subido (opcional)
    * @returns El equipo creado con la relación a su usuario
    */
   @Roles(Role.ADMIN, Role.MANAGER, Role.USER)
   @Post()
+  @UseInterceptors(
+    FileInterceptor('foto', {
+      storage: storageConfig,
+      fileFilter: (_req, file, callback) => {
+        if (!file.originalname.match(/\.(jpg|jpeg|png|gif|webp)$/)) {
+          return callback(
+            new BadRequestException(
+              'Solo se permiten archivos de imagen (jpg, jpeg, png, gif, webp).',
+            ),
+            false,
+          );
+        }
+        callback(null, true);
+      },
+      limits: { fileSize: 5 * 1024 * 1024 }, // 5 MB máximo
+    }),
+  )
   async create(
     @Body() createEquipoDto: CreateEquipoDto,
     @Req() req: RequestWithUser,
+    @UploadedFile() file?: Express.Multer.File,
   ) {
     // req.user.sub contiene el ID del usuario extraído del token JWT
-    return this.equiposService.create(createEquipoDto, req.user.sub);
+    return this.equiposService.create(createEquipoDto, req.user.sub, file);
   }
 
   /**
