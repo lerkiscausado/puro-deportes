@@ -88,13 +88,24 @@ export class PartidosController {
   }
 
   /**
-   * Endpoint público para obtener la programación de partidos.
+   * Endpoint público para obtener la programación de partidos desde la fecha actual hacia adelante.
    * Ruta: GET /partidos/programacion
+   *
+   * @param page - Número de página opcional (ej: ?page=1)
+   * @param limit - Límite de elementos por página opcional (ej: ?limit=10)
    */
   @Public()
   @Get('programacion')
-  async findPublicProgramados() {
-    return this.partidosService.findPublicProgramados();
+  async findPublicProgramados(
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
+  ) {
+    const pageNum = page ? parseInt(page, 10) : undefined;
+    const limitNum = limit ? parseInt(limit, 10) : undefined;
+    return this.partidosService.findPublicProgramados(
+      isNaN(pageNum as number) ? undefined : pageNum,
+      isNaN(limitNum as number) ? undefined : limitNum,
+    );
   }
 
   /**

@@ -69,7 +69,7 @@ describe('PartidosService', () => {
   });
 
   describe('findPublicProgramados', () => {
-    it('debe retornar solo partidos en estado PROGRAMADO sin incluir la relación user', async () => {
+    it('debe retornar solo partidos en estado PROGRAMADO desde la fecha actual sin incluir la relación user', async () => {
       const mockProgramados: Partial<Partido>[] = [
         {
           id: 1,
@@ -86,10 +86,13 @@ describe('PartidosService', () => {
 
       partidosRepositoryMock.find.mockResolvedValue(mockProgramados);
 
-      const result = await service.findPublicProgramados();
+      const result = (await service.findPublicProgramados()) as Partido[];
 
       expect(partidosRepositoryMock.find).toHaveBeenCalledWith({
-        where: { estado: EstadoPartido.PROGRAMADO },
+        where: {
+          estado: EstadoPartido.PROGRAMADO,
+          fecha: expect.anything(),
+        },
         relations: {
           torneo: true,
           equipoLocal: true,
@@ -106,6 +109,55 @@ describe('PartidosService', () => {
       expect(result[0].estado).toBe(EstadoPartido.PROGRAMADO);
       expect(result[0].user).toBeUndefined();
       expect(result[0].torneo?.user).toBeUndefined();
+    });
+
+    it('debe retornar objeto paginado cuando se pasan parámetros page y limit', async () => {
+      const mockProgramados: Partial<Partido>[] = [
+        {
+          id: 1,
+          fecha: '2026-08-10',
+          hora: '15:00:00',
+          estado: EstadoPartido.PROGRAMADO,
+          tipoJuego: TipoJuego.OFICIAL,
+          user: { id: 99, email: 'admin@test.com' } as User,
+        },
+      ];
+
+      partidosRepositoryMock.findAndCount.mockResolvedValue([mockProgramados, 12]);
+
+      const result = (await service.findPublicProgramados(1, 10)) as {
+        data: Partido[];
+        total: number;
+        page: number;
+        limit: number;
+        totalPages: number;
+      };
+
+      expect(partidosRepositoryMock.findAndCount).toHaveBeenCalledWith({
+        where: {
+          estado: EstadoPartido.PROGRAMADO,
+          fecha: expect.anything(),
+        },
+        relations: {
+          torneo: true,
+          equipoLocal: true,
+          equipoVisitante: true,
+          escenario: true,
+        },
+        order: {
+          fecha: 'ASC',
+          hora: 'ASC',
+        },
+        skip: 0,
+        take: 10,
+      });
+
+      expect(result.data).toHaveLength(1);
+      expect(result.total).toBe(12);
+      expect(result.page).toBe(1);
+      expect(result.limit).toBe(10);
+      expect(result.totalPages).toBe(2);
+      expect(result.data[0].user).toBeUndefined();
     });
   });
 

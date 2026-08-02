@@ -5,7 +5,7 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, MoreThanOrEqual } from 'typeorm';
 import { Partido } from './partido.entity';
 import { CreatePartidoDto } from './dto/create-partido.dto';
 import { UpdatePartidoDto } from './dto/update-partido.dto';
@@ -114,13 +114,66 @@ export class PartidosService {
 
   /**
    * Obtiene la programación pública de partidos (estado PROGRAMADO),
-   * ordenados por fecha y hora ascendente.
+   * ordenados por fecha y hora ascendente desde la fecha actual en adelante.
+   * Soporta paginación opcional mediante page y limit.
    *
-   * @returns Lista de partidos programados sin información de usuarios creadores
+   * @param page - Número de página (opcional)
+   * @param limit - Cantidad de partidos por página (opcional)
+   * @returns Lista de partidos programados o conjunto paginado sin información de usuarios creadores
    */
-  async findPublicProgramados(): Promise<Partido[]> {
+  async findPublicProgramados(
+    page?: number,
+    limit?: number,
+  ): Promise<
+    | Partido[]
+    | {
+        data: Partido[];
+        total: number;
+        page: number;
+        limit: number;
+        totalPages: number;
+      }
+  > {
+    const today = new Date().toISOString().split('T')[0];
+
+    if (page !== undefined || limit !== undefined) {
+      const pageNum = page && page > 0 ? page : 1;
+      const limitNum = limit && limit > 0 ? limit : 10;
+      const skip = (pageNum - 1) * limitNum;
+
+      const [partidos, total] = await this.partidosRepository.findAndCount({
+        where: {
+          estado: EstadoPartido.PROGRAMADO,
+          fecha: MoreThanOrEqual(today),
+        },
+        relations: {
+          torneo: true,
+          equipoLocal: true,
+          equipoVisitante: true,
+          escenario: true,
+        },
+        order: {
+          fecha: 'ASC',
+          hora: 'ASC',
+        },
+        skip,
+        take: limitNum,
+      });
+
+      return {
+        data: partidos.map((p) => this.sanitizePublicPartido(p)),
+        total,
+        page: pageNum,
+        limit: limitNum,
+        totalPages: Math.ceil(total / limitNum),
+      };
+    }
+
     const partidos = await this.partidosRepository.find({
-      where: { estado: EstadoPartido.PROGRAMADO },
+      where: {
+        estado: EstadoPartido.PROGRAMADO,
+        fecha: MoreThanOrEqual(today),
+      },
       relations: {
         torneo: true,
         equipoLocal: true,
