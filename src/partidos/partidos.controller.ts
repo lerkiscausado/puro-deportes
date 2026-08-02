@@ -7,6 +7,7 @@ import {
   ParseIntPipe,
   Patch,
   Post,
+  Query,
   Req,
   UseGuards,
 } from '@nestjs/common';
@@ -99,11 +100,22 @@ export class PartidosController {
   /**
    * Endpoint público para obtener los resultados de partidos finalizados.
    * Ruta: GET /partidos/resultados
+   *
+   * @param page - Número de página opcional (ej: ?page=1)
+   * @param limit - Límite de elementos por página opcional (ej: ?limit=10)
    */
   @Public()
   @Get('resultados')
-  async findPublicFinalizados() {
-    return this.partidosService.findPublicFinalizados();
+  async findPublicFinalizados(
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
+  ) {
+    const pageNum = page ? parseInt(page, 10) : undefined;
+    const limitNum = limit ? parseInt(limit, 10) : undefined;
+    return this.partidosService.findPublicFinalizados(
+      isNaN(pageNum as number) ? undefined : pageNum,
+      isNaN(limitNum as number) ? undefined : limitNum,
+    );
   }
 
   /**

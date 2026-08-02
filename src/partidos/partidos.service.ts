@@ -138,11 +138,56 @@ export class PartidosService {
 
   /**
    * Obtiene los resultados públicos de partidos (estado FINALIZADO),
-   * ordenados por fecha y hora descendente (máximo 50).
+   * ordenados por fecha y hora descendente (de más reciente a más antiguo).
+   * Soporta paginación opcional mediante page y limit.
    *
-   * @returns Lista de los últimos 50 partidos finalizados sin información de usuarios creadores
+   * @param page - Número de página (opcional)
+   * @param limit - Cantidad de partidos por página (opcional)
+   * @returns Lista de partidos finalizados o conjunto paginado sin información de usuarios creadores
    */
-  async findPublicFinalizados(): Promise<Partido[]> {
+  async findPublicFinalizados(
+    page?: number,
+    limit?: number,
+  ): Promise<
+    | Partido[]
+    | {
+        data: Partido[];
+        total: number;
+        page: number;
+        limit: number;
+        totalPages: number;
+      }
+  > {
+    if (page !== undefined || limit !== undefined) {
+      const pageNum = page && page > 0 ? page : 1;
+      const limitNum = limit && limit > 0 ? limit : 10;
+      const skip = (pageNum - 1) * limitNum;
+
+      const [partidos, total] = await this.partidosRepository.findAndCount({
+        where: { estado: EstadoPartido.FINALIZADO },
+        relations: {
+          torneo: true,
+          equipoLocal: true,
+          equipoVisitante: true,
+          escenario: true,
+        },
+        order: {
+          fecha: 'DESC',
+          hora: 'DESC',
+        },
+        skip,
+        take: limitNum,
+      });
+
+      return {
+        data: partidos.map((p) => this.sanitizePublicPartido(p)),
+        total,
+        page: pageNum,
+        limit: limitNum,
+        totalPages: Math.ceil(total / limitNum),
+      };
+    }
+
     const partidos = await this.partidosRepository.find({
       where: { estado: EstadoPartido.FINALIZADO },
       relations: {
