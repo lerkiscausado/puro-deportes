@@ -5,7 +5,7 @@ import {
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { JwtService } from '@nestjs/jwt';
-import { Repository } from 'typeorm';
+import { Repository, QueryFailedError } from 'typeorm';
 import * as bcrypt from 'bcrypt';
 import { User } from './user.entity';
 import { CreateUserDto } from './dto/create-user.dto';
@@ -61,13 +61,23 @@ export class UsersService {
       password: hashedPassword,
     });
 
-    // Guarda el usuario en la base de datos
-    const savedUser = await this.usersRepository.save(user);
+    // Guarda el usuario en la base de datos manejando posibles condiciones de carrera
+    try {
+      const savedUser = await this.usersRepository.save(user);
 
-    // Desestructura para excluir la contraseña de la respuesta
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const { password, ...result } = savedUser;
-    return result;
+      // Desestructura para excluir la contraseña de la respuesta
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      const { password, ...result } = savedUser;
+      return result;
+    } catch (error) {
+      if (
+        error instanceof QueryFailedError &&
+        (error as any).driverError?.code === 'ER_DUP_ENTRY'
+      ) {
+        throw new ConflictException('El email ya se encuentra registrado');
+      }
+      throw error;
+    }
   }
 
   /**

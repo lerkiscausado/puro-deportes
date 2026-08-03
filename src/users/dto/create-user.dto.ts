@@ -6,6 +6,7 @@ import {
   IsNotEmpty,
   IsOptional,
   IsString,
+  Matches,
   MinLength,
 } from 'class-validator';
 import { Genero } from '../enums/genero.enum';
@@ -20,14 +21,28 @@ export class CreateUserDto {
   @IsEmail()
   email: string;
 
-  /** Número de teléfono - no puede estar vacío */
+  /** Número de teléfono - formato válido internacional o colombiano */
   @IsString()
-  @IsNotEmpty()
+  @Matches(/^\+?[0-9\s\-()]{7,20}$/, {
+    message: 'El teléfono no tiene un formato válido',
+  })
   phone: string;
 
-  /** Contraseña - debe tener mínimo 6 caracteres */
+  /** Contraseña - mínimo 8 caracteres, al menos una mayúscula, una minúscula, un número y un carácter especial */
   @IsString()
-  @MinLength(6)
+  @MinLength(8, { message: 'La contraseña debe tener al menos 8 caracteres' })
+  @Matches(/(?=.*[a-z])/, {
+    message: 'La contraseña debe contener al menos una letra minúscula',
+  })
+  @Matches(/(?=.*[A-Z])/, {
+    message: 'La contraseña debe contener al menos una letra mayúscula',
+  })
+  @Matches(/(?=.*\d)/, {
+    message: 'La contraseña debe contener al menos un número',
+  })
+  @Matches(/(?=.*[!@#$%^&*(),.?":{}|<>])/, {
+    message: 'La contraseña debe contener al menos un carácter especial',
+  })
   password: string;
 
   /** Nombre completo del usuario - no puede estar vacío */
