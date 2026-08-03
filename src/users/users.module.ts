@@ -5,6 +5,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { User } from './user.entity';
 import { UsersService } from './users.service';
 import { UsersController } from './users.controller';
+import { EmailModule } from '../email/email.module';
 
 /**
  * Módulo de usuarios.
@@ -18,6 +19,8 @@ import { UsersController } from './users.controller';
 @Module({
   imports: [
     TypeOrmModule.forFeature([User]),
+    ConfigModule,
+    EmailModule,
     JwtModule.registerAsync({
       imports: [ConfigModule],
       inject: [ConfigService],

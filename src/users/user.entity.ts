@@ -59,6 +59,18 @@ export class User {
   @Column({ type: 'enum', enum: Role, default: Role.USER })
   role: Role;
 
+  /** Indica si el usuario ha verificado su correo electrónico */
+  @Column({ default: false })
+  emailVerified: boolean;
+
+  /** Hash SHA-256 del token de verificación de correo (null si ya verificado o no generado) */
+  @Column({ type: 'varchar', nullable: true })
+  emailVerificationTokenHash: string | null;
+
+  /** Fecha y hora de expiración del token de verificación (null si no aplica) */
+  @Column({ type: 'datetime', nullable: true })
+  emailVerificationTokenExpiresAt: Date | null;
+
   /** Fecha de creación del registro (generada automáticamente por TypeORM) */
   @CreateDateColumn()
   createdAt: Date;

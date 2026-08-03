@@ -13,9 +13,12 @@ import { UsersService } from './users.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { LoginUserDto } from './dto/login-user.dto';
 import { UpdateProfileDto } from './dto/update-profile.dto';
+import { VerifyEmailDto } from './dto/verify-email.dto';
+import { ResendVerificationDto } from './dto/resend-verification.dto';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import { RolesGuard } from './guards/roles.guard';
 import { Roles } from './decorators/roles.decorator';
+import { Public } from './decorators/public.decorator';
 import { Role } from './enums/role.enum';
 
 /**
@@ -44,6 +47,39 @@ export class UsersController {
   @Post('register')
   async register(@Body() createUserDto: CreateUserDto) {
     return this.usersService.register(createUserDto);
+  }
+
+  /**
+   * Endpoint para verificar el correo electrónico del usuario.
+   * Ruta: POST /users/verify-email
+   *
+   * @param verifyEmailDto - DTO con el token de verificación recibido en el correo
+   * @returns Mensaje de confirmación de verificación exitosa
+   */
+  @Public()
+  @Post('verify-email')
+  async verifyEmail(@Body() verifyEmailDto: VerifyEmailDto) {
+    return this.usersService.verifyEmail(verifyEmailDto.token);
+  }
+
+  /**
+   * Endpoint para solicitar un nuevo enlace de verificación de correo.
+   * Ruta: POST /users/resend-verification
+   *
+   * Rate limiting: Máximo 3 intentos por 10 minutos por IP.
+   *
+   * @param resendVerificationDto - DTO con el email del usuario
+   * @returns Mensaje genérico de confirmación (no revela la existencia del email)
+   */
+  @Public()
+  @Throttle({ global: { limit: 3, ttl: 600000 } })
+  @Post('resend-verification')
+  async resendVerification(
+    @Body() resendVerificationDto: ResendVerificationDto,
+  ) {
+    return this.usersService.resendVerificationEmail(
+      resendVerificationDto.email,
+    );
   }
 
   /**

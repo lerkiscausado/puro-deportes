@@ -1,16 +1,20 @@
 import {
+  BadRequestException,
   ConflictException,
   Injectable,
   UnauthorizedException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
+import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import { Repository, QueryFailedError } from 'typeorm';
 import * as bcrypt from 'bcrypt';
+import * as crypto from 'crypto';
 import { User } from './user.entity';
 import { CreateUserDto } from './dto/create-user.dto';
 import { LoginUserDto } from './dto/login-user.dto';
 import { UpdateProfileDto } from './dto/update-profile.dto';
+import { EmailService } from '../email/email.service';
 
 /**
  * Servicio de usuarios.
@@ -24,6 +28,10 @@ export class UsersService {
     private readonly usersRepository: Repository<User>,
     /** Servicio de JWT para generar tokens de autenticación */
     private readonly jwtService: JwtService,
+    /** Servicio de configuración para obtener variables de entorno */
+    private readonly configService: ConfigService,
+    /** Servicio de envío de correos electrónicos */
+    private readonly emailService: EmailService,
   ) {}
 
   /**
@@ -32,8 +40,10 @@ export class UsersService {
    * Proceso:
    * 1. Verifica que el email no esté registrado previamente.
    * 2. Hashea la contraseña con bcrypt (salt rounds: 10) para almacenarla de forma segura.
-   * 3. Crea y guarda el registro del usuario en la base de datos.
-   * 4. Retorna los datos del usuario sin incluir la contraseña.
+   * 3. Genera un token de verificación aleatorio y su hash SHA-256 (expiración: 24h).
+   * 4. Crea y guarda el registro del usuario con emailVerified = false.
+   * 5. Envía el correo de verificación usando EmailService.
+   * 6. Retorna los datos del usuario sin incluir la contraseña.
    *
    * @param createUserDto - Datos del usuario a registrar (email, phone, password, name)
    * @returns El usuario creado sin el campo password
@@ -55,15 +65,37 @@ export class UsersService {
     // Hashea la contraseña con bcrypt usando 10 rondas de salt
     const hashedPassword = await bcrypt.hash(createUserDto.password, 10);
 
-    // Crea la instancia del usuario con la contraseña hasheada
+    // Genera un token aleatorio y su hash SHA-256 para verificación de correo (expira en 24 horas)
+    const verificationToken = crypto.randomBytes(32).toString('hex');
+    const tokenHash = crypto
+      .createHash('sha256')
+      .update(verificationToken)
+      .digest('hex');
+    const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
+
+    // Crea la instancia del usuario con la contraseña hasheada y datos de verificación
     const user = this.usersRepository.create({
       ...createUserDto,
       password: hashedPassword,
+      emailVerified: false,
+      emailVerificationTokenHash: tokenHash,
+      emailVerificationTokenExpiresAt: expiresAt,
     });
 
     // Guarda el usuario en la base de datos manejando posibles condiciones de carrera
     try {
       const savedUser = await this.usersRepository.save(user);
+
+      // Construye la URL de verificación y envía el correo con el token en texto plano
+      const frontendUrl =
+        this.configService.get<string>('FRONTEND_URL') ||
+        'http://localhost:3001';
+      const verificationUrl = `${frontendUrl}/verificar-correo?token=${verificationToken}`;
+      await this.emailService.sendVerificationEmail(
+        savedUser.email,
+        savedUser.name,
+        verificationUrl,
+      );
 
       // Desestructura para excluir la contraseña de la respuesta
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -81,18 +113,106 @@ export class UsersService {
   }
 
   /**
+   * Verifica la dirección de correo electrónico de un usuario usando un token.
+   *
+   * @param token - Token enviado por correo electrónico en texto plano
+   * @returns Mensaje de confirmación
+   * @throws BadRequestException si el token es inválido o ha expirado
+   */
+  async verifyEmail(token: string): Promise<{ message: string }> {
+    const tokenHash = crypto
+      .createHash('sha256')
+      .update(token)
+      .digest('hex');
+
+    const user = await this.usersRepository.findOne({
+      where: {
+        emailVerificationTokenHash: tokenHash,
+      },
+    });
+
+    if (
+      !user ||
+      !user.emailVerificationTokenExpiresAt ||
+      user.emailVerificationTokenExpiresAt < new Date()
+    ) {
+      throw new BadRequestException(
+        'El enlace de verificación no es válido o ha expirado',
+      );
+    }
+
+    user.emailVerified = true;
+    user.emailVerificationTokenHash = null;
+    user.emailVerificationTokenExpiresAt = null;
+
+    await this.usersRepository.save(user);
+
+    return { message: 'Correo electrónico verificado exitosamente' };
+  }
+
+  /**
+   * Reenvía un nuevo correo de verificación si el usuario existe y aún no se ha verificado.
+   * Por seguridad, retorna la misma respuesta genérica en todos los casos para evitar enumeración.
+   *
+   * @param email - Correo del usuario a verificar
+   * @returns Mensaje genérico de éxito
+   */
+  async resendVerificationEmail(
+    email: string,
+  ): Promise<{ message: string }> {
+    const genericResponse = {
+      message:
+        'Si el correo está registrado y pendiente de verificación, se ha enviado un nuevo enlace.',
+    };
+
+    const user = await this.usersRepository.findOne({
+      where: { email },
+    });
+
+    if (!user || user.emailVerified) {
+      return genericResponse;
+    }
+
+    const verificationToken = crypto.randomBytes(32).toString('hex');
+    const tokenHash = crypto
+      .createHash('sha256')
+      .update(verificationToken)
+      .digest('hex');
+    const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
+
+    user.emailVerificationTokenHash = tokenHash;
+    user.emailVerificationTokenExpiresAt = expiresAt;
+
+    await this.usersRepository.save(user);
+
+    const frontendUrl =
+      this.configService.get<string>('FRONTEND_URL') ||
+      'http://localhost:3001';
+    const verificationUrl = `${frontendUrl}/verificar-correo?token=${verificationToken}`;
+
+    await this.emailService.sendVerificationEmail(
+      user.email,
+      user.name,
+      verificationUrl,
+    );
+
+    return genericResponse;
+  }
+
+  /**
    * Inicia sesión de un usuario existente.
    *
    * Proceso:
    * 1. Busca el usuario por email en la base de datos.
    * 2. Si no existe, lanza una excepción 401 Unauthorized.
-   * 3. Compara la contraseña enviada con el hash almacenado usando bcrypt.
-   * 4. Si no coincide, lanza una excepción 401 Unauthorized.
-   * 5. Genera y retorna un token JWT con el id, email y name del usuario.
+   * 3. Si el correo no está verificado, lanza una excepción 401 Unauthorized.
+   * 4. Compara la contraseña enviada con el hash almacenado usando bcrypt.
+   * 5. Si no coincide, lanza una excepción 401 Unauthorized.
+   * 6. Genera y retorna un token JWT con el id, email y name del usuario.
    *
    * @param loginUserDto - Credenciales del usuario (email, password)
    * @returns Objeto con el access_token JWT y los datos básicos del usuario
-   * @throws UnauthorizedException si el email no existe o la contraseña es incorrecta
+   * @throws UnauthorizedException si el email no existe, la contraseña es incorrecta o no está verificado
    */
   async login(
     loginUserDto: LoginUserDto,
@@ -107,6 +227,13 @@ export class UsersService {
     // Si el email no está registrado, lanza excepción 401
     if (!user) {
       throw new UnauthorizedException('Credenciales inválidas');
+    }
+
+    // Si el correo no ha sido verificado, lanza excepción 401 ANTES de comprobar la contraseña
+    if (!user.emailVerified) {
+      throw new UnauthorizedException(
+        'Debes verificar tu correo electrónico antes de iniciar sesión. Revisa tu bandeja de entrada.',
+      );
     }
 
     // Compara la contraseña enviada con el hash almacenado en la base de datos
