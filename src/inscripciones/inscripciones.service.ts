@@ -195,6 +195,65 @@ export class InscripcionesService {
   }
 
   /**
+   * Obtiene las inscripciones activas de un torneo para la vista pública (tabla de posiciones).
+   * Ordenadas por puntos DESC y diferencia DESC.
+   * Excluye los datos de contacto del equipo (telefono, correo).
+   *
+   * @param torneoId - ID del torneo
+   */
+  async findPublicByTorneo(torneoId: number) {
+    const inscripciones = await this.inscripcionesRepository.find({
+      where: {
+        torneo: { id: torneoId },
+        estado: EstadoInscripcion.ACTIVO,
+      },
+      relations: {
+        equipo: true,
+      },
+      order: {
+        puntos: 'DESC',
+        diferencia: 'DESC',
+      },
+    });
+
+    return inscripciones.map((insc) => {
+      const {
+        id,
+        partidosJugados,
+        partidosGanados,
+        partidosEmpatados,
+        partidosPerdidos,
+        puntosFavor,
+        puntosContra,
+        diferencia,
+        puntos,
+        equipo,
+      } = insc;
+
+      return {
+        id,
+        partidosJugados,
+        partidosGanados,
+        partidosEmpatados,
+        partidosPerdidos,
+        puntosFavor,
+        puntosContra,
+        diferencia,
+        puntos,
+        equipo: equipo
+          ? {
+              id: equipo.id,
+              nombre: equipo.nombre,
+              foto: equipo.foto,
+              representante: equipo.representante,
+              deporte: equipo.deporte,
+            }
+          : null,
+      };
+    });
+  }
+
+  /**
    * Actualiza los datos de una inscripción (estadísticas o estado).
    *
    * @param id - ID de la inscripción

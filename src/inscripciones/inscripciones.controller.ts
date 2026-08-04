@@ -18,6 +18,7 @@ import { JwtAuthGuard } from '../users/guards/jwt-auth.guard';
 import { RolesGuard } from '../users/guards/roles.guard';
 import { Roles } from '../users/decorators/roles.decorator';
 import { Role } from '../users/enums/role.enum';
+import { Public } from '../users/decorators/public.decorator';
 
 /**
  * Controlador de inscripciones.
@@ -70,6 +71,19 @@ export class InscripcionesController {
   @Get('mis-inscripciones')
   async findMyInscripciones(@Req() req: RequestWithUser) {
     return this.inscripcionesService.findByUser(req.user.sub);
+  }
+
+  /**
+   * Endpoint público para obtener las inscripciones y tabla de posiciones de un torneo.
+   * Ruta: GET /inscripciones/torneo/:torneoId/public
+   *
+   * @param torneoId - ID del torneo
+   * @returns Lista de inscripciones ordenadas por puntos y diferencia sin datos de contacto
+   */
+  @Public()
+  @Get('torneo/:torneoId/public')
+  async findPublicByTorneo(@Param('torneoId', ParseIntPipe) torneoId: number) {
+    return this.inscripcionesService.findPublicByTorneo(torneoId);
   }
 
   /**

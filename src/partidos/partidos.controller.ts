@@ -75,6 +75,19 @@ export class PartidosController {
   }
 
   /**
+   * Endpoint público para obtener todos los partidos pertenecientes a un torneo específico.
+   * Ruta: GET /partidos/torneo/:torneoId/public
+   *
+   * @param torneoId - ID del torneo
+   * @returns Lista de partidos del torneo
+   */
+  @Public()
+  @Get('torneo/:torneoId/public')
+  async findPublicByTorneo(@Param('torneoId', ParseIntPipe) torneoId: number) {
+    return this.partidosService.findPublicByTorneo(torneoId);
+  }
+
+  /**
    * Endpoint para obtener todos los partidos pertenecientes a un torneo específico.
    * Ruta: GET /partidos/torneo/:torneoId
    *

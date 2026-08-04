@@ -248,4 +248,59 @@ describe('PartidosService', () => {
       expect(result.data[0].user).toBeUndefined();
     });
   });
+
+  describe('findPublicByTorneo', () => {
+    it('debe retornar los partidos de un torneo ordenados por fecha ASC y hora ASC sin incluir datos de user', async () => {
+      const mockPartidos: Partial<Partido>[] = [
+        {
+          id: 1,
+          fecha: '2026-08-10',
+          hora: '15:00:00',
+          estado: EstadoPartido.PROGRAMADO,
+          tipoJuego: TipoJuego.OFICIAL,
+          user: { id: 99, email: 'admin@test.com' } as User,
+          torneo: { id: 5, name: 'Torneo 5', user: { id: 99 } } as Torneo,
+          equipoLocal: { id: 10, nombre: 'Local' } as Equipo,
+          equipoVisitante: { id: 20, nombre: 'Visitante' } as Equipo,
+          escenario: { id: 2, nombre: 'Estadio 1' } as Escenario,
+        },
+        {
+          id: 2,
+          fecha: '2026-08-10',
+          hora: '17:00:00',
+          estado: EstadoPartido.FINALIZADO,
+          local: 3,
+          visitante: 1,
+          tipoJuego: TipoJuego.OFICIAL,
+          user: { id: 99, email: 'admin@test.com' } as User,
+          torneo: { id: 5, name: 'Torneo 5' } as Torneo,
+          equipoLocal: { id: 30, nombre: 'Local 2' } as Equipo,
+          equipoVisitante: { id: 40, nombre: 'Visitante 2' } as Equipo,
+        },
+      ];
+
+      partidosRepositoryMock.find.mockResolvedValue(mockPartidos);
+
+      const result = await service.findPublicByTorneo(5);
+
+      expect(partidosRepositoryMock.find).toHaveBeenCalledWith({
+        where: { torneo: { id: 5 } },
+        relations: {
+          equipoLocal: true,
+          equipoVisitante: true,
+          escenario: true,
+        },
+        order: {
+          fecha: 'ASC',
+          hora: 'ASC',
+        },
+      });
+
+      expect(result).toHaveLength(2);
+      expect(result[0].user).toBeUndefined();
+      expect(result[0].torneo?.user).toBeUndefined();
+      expect(result[1].user).toBeUndefined();
+      expect(JSON.stringify(result)).not.toContain('admin@test.com');
+    });
+  });
 });

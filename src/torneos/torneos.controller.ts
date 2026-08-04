@@ -133,6 +133,19 @@ export class TorneosController {
   }
 
   /**
+   * Endpoint público para obtener un torneo específico por su ID.
+   * Ruta: GET /torneos/:id/public
+   *
+   * @param id - ID del torneo (validado como número entero)
+   * @returns El torneo encontrado
+   */
+  @Public()
+  @Get(':id/public')
+  async findPublicById(@Param('id', ParseIntPipe) id: number) {
+    return this.torneosService.findPublicById(id);
+  }
+
+  /**
    * Endpoint para obtener un torneo específico por su ID.
    * Ruta: GET /torneos/:id
    *

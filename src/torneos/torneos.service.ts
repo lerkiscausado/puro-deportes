@@ -123,6 +123,25 @@ export class TorneosService {
   }
 
   /**
+   * Obtiene un torneo público por su ID sin incluir la relación del usuario creador.
+   *
+   * @param id - ID del torneo a buscar
+   * @returns El torneo encontrado
+   * @throws NotFoundException si el torneo no existe
+   */
+  async findPublicById(id: number): Promise<Torneo> {
+    const torneo = await this.torneosRepository.findOne({
+      where: { id },
+    });
+
+    if (!torneo) {
+      throw new NotFoundException('Torneo no encontrado');
+    }
+
+    return torneo;
+  }
+
+  /**
    * Obtiene todos los torneos creados por un usuario específico.
    *
    * @param userId - ID del usuario cuyos torneos se desean consultar

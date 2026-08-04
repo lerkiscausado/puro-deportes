@@ -45,4 +45,21 @@ describe('AppController (e2e)', () => {
     expect(jsonString).not.toContain('email');
     expect(jsonString).not.toContain('phone');
   });
+
+  it('GET /api/torneos/:id/public → responde sin requerir JWT guard', async () => {
+    const response = await request(app.getHttpServer()).get('/api/torneos/999999/public');
+    expect(response.status).toBe(404);
+  });
+
+  it('GET /api/inscripciones/torneo/:torneoId/public → responde sin requerir JWT guard', async () => {
+    const response = await request(app.getHttpServer()).get('/api/inscripciones/torneo/1/public');
+    expect(response.status).toBe(200);
+    expect(Array.isArray(response.body)).toBe(true);
+  });
+
+  it('GET /api/partidos/torneo/:torneoId/public → responde sin requerir JWT guard', async () => {
+    const response = await request(app.getHttpServer()).get('/api/partidos/torneo/1/public');
+    expect(response.status).toBe(200);
+    expect(Array.isArray(response.body)).toBe(true);
+  });
 });

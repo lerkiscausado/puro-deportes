@@ -479,6 +479,30 @@ export class PartidosService {
   }
 
   /**
+   * Obtiene todos los partidos pertenecientes a un torneo para visualización pública.
+   * Ordenados por fecha ASC y hora ASC. No incluye información de usuarios creadores.
+   *
+   * @param torneoId - ID del torneo
+   * @returns Lista de partidos del torneo sin datos de usuarios creadores
+   */
+  async findPublicByTorneo(torneoId: number): Promise<Partido[]> {
+    const partidos = await this.partidosRepository.find({
+      where: { torneo: { id: torneoId } },
+      relations: {
+        equipoLocal: true,
+        equipoVisitante: true,
+        escenario: true,
+      },
+      order: {
+        fecha: 'ASC',
+        hora: 'ASC',
+      },
+    });
+
+    return partidos.map((p) => this.sanitizePublicPartido(p));
+  }
+
+  /**
    * Actualiza un partido existente.
    * Permite la actualización al creador del partido o a un administrador.
    *
