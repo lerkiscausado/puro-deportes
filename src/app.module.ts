@@ -38,7 +38,13 @@ import { CustomThrottlerGuard } from './common/guards/custom-throttler.guard';
       imports: [ConfigModule],
       useFactory: (configService: ConfigService) => {
         const nodeEnv = configService.get<string>('NODE_ENV', 'development');
-        const isDevelopment = nodeEnv === 'development';
+        // Sincroniza el esquema en cualquier entorno que NO sea producción
+        // explícita (development, test, etc.). Esto permite que
+        // `npm run test:e2e` sea autocontenido contra una BD vacía, ya que
+        // Jest fuerza NODE_ENV=test internamente. En producción (NODE_ENV=
+        // production en el .env del VPS) esto sigue en false, usando
+        // migraciones como corresponde.
+        const shouldSynchronize = nodeEnv !== 'production';
 
         return {
           type: 'mysql',
@@ -50,9 +56,9 @@ import { CustomThrottlerGuard } from './common/guards/custom-throttler.guard';
           entities: [],
           autoLoadEntities: true,
 
-          // Solo sincroniza automáticamente en desarrollo local.
+          // Solo sincroniza automáticamente en entornos no productivos.
           // En staging/producción usa `npm run migration:run` antes de arrancar.
-          synchronize: isDevelopment,
+          synchronize: shouldSynchronize,
 
           // Ruta a los archivos de migración (TypeScript en dev, JS en prod).
           migrations: [__dirname + '/../migrations/*{.ts,.js}'],
@@ -87,4 +93,4 @@ import { CustomThrottlerGuard } from './common/guards/custom-throttler.guard';
     },
   ],
 })
-export class AppModule {}
+export class AppModule { }
