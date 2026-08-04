@@ -60,7 +60,7 @@ describe('TorneosService', () => {
         name: 'Torneo Nocturno',
         deporte: Deporte.FUTBOL,
         rama: Rama.MASCULINO,
-        estado: EstadoTorneo.EN_PROGRESO,
+        estado: EstadoTorneo.EN_JUEGO,
         escenario: { id: 5, nombre: 'Cancha 1' } as Escenario,
       };
 

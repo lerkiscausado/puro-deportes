@@ -122,7 +122,7 @@ describe('InscripcionesService', () => {
       expect(resultado).toHaveLength(2);
       expect(resultado[0].id).toBe(1);
       expect(resultado[0].puntos).toBe(9);
-      expect(resultado[0].equipo.nombre).toBe('Equipo Alfa');
+      expect(resultado[0].equipo?.nombre).toBe('Equipo Alfa');
 
       const jsonStr = JSON.stringify(resultado);
       expect(jsonStr).not.toContain('telefono');
