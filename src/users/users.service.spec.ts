@@ -12,14 +12,23 @@ import { validate } from 'class-validator';
 import { plainToInstance } from 'class-transformer';
 import * as crypto from 'crypto';
 import * as bcrypt from 'bcrypt';
+import * as fs from 'fs';
 import { UsersService } from './users.service';
 import { User } from './user.entity';
 import { CreateUserDto } from './dto/create-user.dto';
+import { ForgotPasswordDto } from './dto/forgot-password.dto';
+import { ResetPasswordDto } from './dto/reset-password.dto';
 import { EmailService } from '../email/email.service';
 
 jest.mock('bcrypt', () => ({
   hash: jest.fn().mockResolvedValue('hashedPassword'),
   compare: jest.fn().mockResolvedValue(true),
+}));
+
+jest.mock('fs', () => ({
+  ...jest.requireActual('fs'),
+  existsSync: jest.fn(),
+  unlinkSync: jest.fn(),
 }));
 
 describe('UsersService y CreateUserDto', () => {
@@ -38,6 +47,7 @@ describe('UsersService y CreateUserDto', () => {
   };
   let emailServiceMock: {
     sendVerificationEmail: jest.Mock;
+    sendPasswordResetEmail: jest.Mock;
   };
 
   beforeEach(async () => {
@@ -62,6 +72,7 @@ describe('UsersService y CreateUserDto', () => {
 
     emailServiceMock = {
       sendVerificationEmail: jest.fn().mockResolvedValue(undefined),
+      sendPasswordResetEmail: jest.fn().mockResolvedValue(undefined),
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -361,6 +372,229 @@ describe('UsersService y CreateUserDto', () => {
 
       expect(result).toHaveProperty('access_token');
       expect(result.user.email).toBe('verified@example.com');
+    });
+  });
+
+  describe('forgotPassword', () => {
+    const genericMessage =
+      'Si el correo está registrado, recibirás un enlace para restablecer tu contraseña.';
+
+    it('responde con el mensaje genérico y NO envía correo si el email no existe', async () => {
+      usersRepositoryMock.findOne.mockResolvedValue(null);
+
+      const res = await service.forgotPassword('noexiste@example.com');
+
+      expect(res.message).toBe(genericMessage);
+      expect(emailServiceMock.sendPasswordResetEmail).not.toHaveBeenCalled();
+    });
+
+    it('responde con el mensaje genérico, guarda hash de token (expira en 1h) y envía correo si el email existe', async () => {
+      const mockUser = {
+        id: 1,
+        email: 'juan@example.com',
+        name: 'Juan Pérez',
+      } as User;
+
+      usersRepositoryMock.findOne.mockResolvedValue(mockUser);
+      usersRepositoryMock.save.mockImplementation(async (u) => u);
+
+      const res = await service.forgotPassword('juan@example.com');
+
+      expect(res.message).toBe(genericMessage);
+      expect(usersRepositoryMock.save).toHaveBeenCalled();
+
+      const savedUser = usersRepositoryMock.save.mock.calls[0][0];
+      expect(savedUser.passwordResetTokenHash).toBeDefined();
+      expect(savedUser.passwordResetTokenHash).toHaveLength(64);
+      expect(savedUser.passwordResetTokenExpiresAt).toBeInstanceOf(Date);
+
+      // Verifica que la fecha de expiración sea aprox 1 hora en el futuro
+      const now = Date.now();
+      const expires = savedUser.passwordResetTokenExpiresAt.getTime();
+      expect(expires - now).toBeGreaterThan(50 * 60 * 1000); // más de 50 mins
+      expect(expires - now).toBeLessThanOrEqual(60 * 60 * 1000 + 5000); // máx 1 hora + buffer
+
+      expect(emailServiceMock.sendPasswordResetEmail).toHaveBeenCalledWith(
+        'juan@example.com',
+        'Juan Pérez',
+        expect.stringContaining('https://purodeporte.co/restablecer-contrasena?token='),
+      );
+    });
+  });
+
+  describe('resetPassword', () => {
+    it('restablece la contraseña con token válido y no expirado', async () => {
+      const rawToken = 'reset-token-12345';
+      const tokenHash = crypto
+        .createHash('sha256')
+        .update(rawToken)
+        .digest('hex');
+
+      const mockUser = {
+        id: 1,
+        email: 'juan@example.com',
+        password: 'oldHashedPassword',
+        passwordResetTokenHash: tokenHash,
+        passwordResetTokenExpiresAt: new Date(Date.now() + 1800000), // +30 mins
+      } as User;
+
+      usersRepositoryMock.findOne.mockResolvedValue(mockUser);
+      usersRepositoryMock.save.mockImplementation(async (u) => u);
+
+      const result = await service.resetPassword(rawToken, 'NewPassword123!');
+
+      expect(result.message).toBe('Contraseña restablecida exitosamente');
+      expect(usersRepositoryMock.save).toHaveBeenCalledWith(
+        expect.objectContaining({
+          password: 'hashedPassword',
+          passwordResetTokenHash: null,
+          passwordResetTokenExpiresAt: null,
+        }),
+      );
+    });
+
+    it('lanza BadRequestException si el token no existe', async () => {
+      usersRepositoryMock.findOne.mockResolvedValue(null);
+
+      await expect(
+        service.resetPassword('token-invalido', 'NewPassword123!'),
+      ).rejects.toThrow(
+        new BadRequestException(
+          'El enlace para restablecer la contraseña no es válido o ha expirado',
+        ),
+      );
+    });
+
+    it('lanza BadRequestException si el token ha expirado', async () => {
+      const rawToken = 'expired-token';
+      const tokenHash = crypto
+        .createHash('sha256')
+        .update(rawToken)
+        .digest('hex');
+
+      const mockUser = {
+        id: 1,
+        email: 'juan@example.com',
+        passwordResetTokenHash: tokenHash,
+        passwordResetTokenExpiresAt: new Date(Date.now() - 1000), // Ya expiró
+      } as User;
+
+      usersRepositoryMock.findOne.mockResolvedValue(mockUser);
+
+      await expect(
+        service.resetPassword(rawToken, 'NewPassword123!'),
+      ).rejects.toThrow(
+        new BadRequestException(
+          'El enlace para restablecer la contraseña no es válido o ha expirado',
+        ),
+      );
+    });
+  });
+
+  describe('Validación de ForgotPasswordDto y ResetPasswordDto', () => {
+    it('ForgotPasswordDto debe validar el email', async () => {
+      const validDto = plainToInstance(ForgotPasswordDto, {
+        email: 'test@example.com',
+      });
+      const validErrors = await validate(validDto);
+      expect(validErrors.length).toBe(0);
+
+      const invalidDto = plainToInstance(ForgotPasswordDto, {
+        email: 'correo-invalido',
+      });
+      const invalidErrors = await validate(invalidDto);
+      expect(invalidErrors.length).toBeGreaterThan(0);
+    });
+
+    it('ResetPasswordDto debe aplicar las 5 reglas de seguridad en password', async () => {
+      const validDto = plainToInstance(ResetPasswordDto, {
+        token: 'valid-token-123',
+        password: 'Password123!',
+      });
+      const validErrors = await validate(validDto);
+      expect(validErrors.length).toBe(0);
+
+      const weakPasswordDto = plainToInstance(ResetPasswordDto, {
+        token: 'valid-token-123',
+        password: 'weak',
+      });
+      const weakErrors = await validate(weakPasswordDto);
+      expect(weakErrors.length).toBeGreaterThan(0);
+    });
+  });
+
+  describe('updateProfile con foto de perfil', () => {
+    const existingUser: User = {
+      id: 1,
+      name: 'Juan Pérez',
+      email: 'juan@example.com',
+      phone: '+573001234567',
+      foto: 'foto-antigua.png',
+    } as User;
+
+    it('caso 1: actualizar sin archivo nuevo conserva la foto actual del usuario', async () => {
+      usersRepositoryMock.findOne.mockResolvedValue(existingUser);
+      usersRepositoryMock.save.mockResolvedValue({
+        ...existingUser,
+        name: 'Juan Carlos',
+      });
+
+      await service.updateProfile(1, { name: 'Juan Carlos' });
+
+      expect(fs.existsSync).not.toHaveBeenCalled();
+      expect(fs.unlinkSync).not.toHaveBeenCalled();
+      expect(usersRepositoryMock.save).toHaveBeenCalledWith(
+        expect.objectContaining({
+          foto: 'foto-antigua.png',
+          name: 'Juan Carlos',
+        }),
+      );
+    });
+
+    it('caso 2: actualizar con archivo nuevo reemplaza la foto y elimina el archivo anterior del disco', async () => {
+      const mockFile = { filename: 'foto-nueva.png' } as Express.Multer.File;
+
+      usersRepositoryMock.findOne.mockResolvedValue(existingUser);
+      usersRepositoryMock.save.mockResolvedValue({
+        ...existingUser,
+        foto: 'foto-nueva.png',
+      });
+
+      (fs.existsSync as jest.Mock).mockReturnValue(true);
+
+      await service.updateProfile(1, {}, mockFile);
+
+      expect(fs.existsSync).toHaveBeenCalled();
+      expect(fs.unlinkSync).toHaveBeenCalled();
+      expect(usersRepositoryMock.save).toHaveBeenCalledWith(
+        expect.objectContaining({
+          foto: 'foto-nueva.png',
+        }),
+      );
+    });
+
+    it('caso 3: actualizar sin foto previa + archivo nuevo asigna la foto nueva sin intentar borrar nada', async () => {
+      const userSinFoto: User = {
+        ...existingUser,
+        foto: null as any,
+      };
+      const mockFile = { filename: 'primer-perfil.png' } as Express.Multer.File;
+
+      usersRepositoryMock.findOne.mockResolvedValue(userSinFoto);
+      usersRepositoryMock.save.mockResolvedValue({
+        ...userSinFoto,
+        foto: 'primer-perfil.png',
+      });
+
+      await service.updateProfile(1, {}, mockFile);
+
+      expect(fs.existsSync).not.toHaveBeenCalled();
+      expect(fs.unlinkSync).not.toHaveBeenCalled();
+      expect(usersRepositoryMock.save).toHaveBeenCalledWith(
+        expect.objectContaining({
+          foto: 'primer-perfil.png',
+        }),
+      );
     });
   });
 });

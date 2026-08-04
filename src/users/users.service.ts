@@ -10,11 +10,14 @@ import { JwtService } from '@nestjs/jwt';
 import { Repository, QueryFailedError } from 'typeorm';
 import * as bcrypt from 'bcrypt';
 import * as crypto from 'crypto';
+import * as fs from 'fs';
+import { join } from 'path';
 import { User } from './user.entity';
 import { CreateUserDto } from './dto/create-user.dto';
 import { LoginUserDto } from './dto/login-user.dto';
 import { UpdateProfileDto } from './dto/update-profile.dto';
 import { EmailService } from '../email/email.service';
+import { getUploadsPath } from '../common/utils/uploads-path.util';
 
 /**
  * Servicio de usuarios.
@@ -200,6 +203,95 @@ export class UsersService {
   }
 
   /**
+   * Solicita el restablecimiento de contraseña enviando un correo con un token temporal (expira en 1 hora).
+   * Para evitar la enumeración de usuarios, retorna siempre el mismo mensaje genérico.
+   *
+   * @param email - Correo electrónico del usuario
+   * @returns Mensaje genérico de confirmación
+   */
+  async forgotPassword(email: string): Promise<{ message: string }> {
+    const genericResponse = {
+      message:
+        'Si el correo está registrado, recibirás un enlace para restablecer tu contraseña.',
+    };
+
+    const user = await this.usersRepository.findOne({
+      where: { email },
+    });
+
+    if (!user) {
+      return genericResponse;
+    }
+
+    const resetToken = crypto.randomBytes(32).toString('hex');
+    const tokenHash = crypto
+      .createHash('sha256')
+      .update(resetToken)
+      .digest('hex');
+    const expiresAt = new Date(Date.now() + 60 * 60 * 1000); // Expira en 1 hora
+
+    user.passwordResetTokenHash = tokenHash;
+    user.passwordResetTokenExpiresAt = expiresAt;
+
+    await this.usersRepository.save(user);
+
+    const frontendUrl =
+      this.configService.get<string>('FRONTEND_URL') ||
+      'http://localhost:3001';
+    const resetUrl = `${frontendUrl}/restablecer-contrasena?token=${resetToken}`;
+
+    await this.emailService.sendPasswordResetEmail(
+      user.email,
+      user.name,
+      resetUrl,
+    );
+
+    return genericResponse;
+  }
+
+  /**
+   * Restablece la contraseña de un usuario validando el token recibido por correo.
+   *
+   * @param token - Token recibido por correo electrónico en texto plano
+   * @param newPassword - Nueva contraseña cumpliendo reglas de seguridad
+   * @returns Mensaje de confirmación de restablecimiento exitoso
+   * @throws BadRequestException si el token no es válido o ha expirado
+   */
+  async resetPassword(
+    token: string,
+    newPassword: string,
+  ): Promise<{ message: string }> {
+    const tokenHash = crypto
+      .createHash('sha256')
+      .update(token)
+      .digest('hex');
+
+    const user = await this.usersRepository.findOne({
+      where: {
+        passwordResetTokenHash: tokenHash,
+      },
+    });
+
+    if (
+      !user ||
+      !user.passwordResetTokenExpiresAt ||
+      user.passwordResetTokenExpiresAt < new Date()
+    ) {
+      throw new BadRequestException(
+        'El enlace para restablecer la contraseña no es válido o ha expirado',
+      );
+    }
+
+    user.password = await bcrypt.hash(newPassword, 10);
+    user.passwordResetTokenHash = null;
+    user.passwordResetTokenExpiresAt = null;
+
+    await this.usersRepository.save(user);
+
+    return { message: 'Contraseña restablecida exitosamente' };
+  }
+
+  /**
    * Inicia sesión de un usuario existente.
    *
    * Proceso:
@@ -303,12 +395,14 @@ export class UsersService {
    *
    * @param userId - ID del usuario a actualizar
    * @param updateProfileDto - Campos a actualizar
+   * @param file - Archivo de imagen subido si se actualiza la foto de perfil (opcional)
    * @returns Los datos del usuario actualizado sin el campo password
    * @throws UnauthorizedException si el usuario no existe
    */
   async updateProfile(
     userId: number,
     updateProfileDto: UpdateProfileDto,
+    file?: Express.Multer.File,
   ): Promise<Omit<User, 'password'>> {
     // Busca el usuario por su ID
     const user = await this.usersRepository.findOne({
@@ -318,6 +412,21 @@ export class UsersService {
     // Si no se encuentra el usuario, lanza excepción 401
     if (!user) {
       throw new UnauthorizedException('Usuario no encontrado');
+    }
+
+    if (file?.filename) {
+      // Si el usuario ya tenía una foto previa guardada, elimina la foto anterior del disco
+      if (user.foto) {
+        const oldPath = join(getUploadsPath('perfiles'), user.foto);
+        try {
+          if (fs.existsSync(oldPath)) {
+            fs.unlinkSync(oldPath);
+          }
+        } catch {
+          // Ignorar silenciosamente si no se pudo eliminar la imagen previa
+        }
+      }
+      user.foto = file.filename;
     }
 
     // Si se envió un nuevo password, lo hashea con bcrypt

@@ -6,7 +6,13 @@ import {
   Post,
   Req,
   UseGuards,
+  UseInterceptors,
+  UploadedFile,
+  BadRequestException,
 } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
+import { diskStorage } from 'multer';
+import { extname } from 'path';
 import { Throttle } from '@nestjs/throttler';
 import type { RequestWithUser } from '../common/interfaces/request-with-user.interface';
 import { UsersService } from './users.service';
@@ -15,11 +21,47 @@ import { LoginUserDto } from './dto/login-user.dto';
 import { UpdateProfileDto } from './dto/update-profile.dto';
 import { VerifyEmailDto } from './dto/verify-email.dto';
 import { ResendVerificationDto } from './dto/resend-verification.dto';
+import { ForgotPasswordDto } from './dto/forgot-password.dto';
+import { ResetPasswordDto } from './dto/reset-password.dto';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import { RolesGuard } from './guards/roles.guard';
 import { Roles } from './decorators/roles.decorator';
 import { Public } from './decorators/public.decorator';
 import { Role } from './enums/role.enum';
+import { getUploadsPath } from '../common/utils/uploads-path.util';
+
+/**
+ * Configuración de almacenamiento para fotos de perfil.
+ */
+const storageConfig = diskStorage({
+  destination: (_req, _file, callback) => {
+    callback(null, getUploadsPath('perfiles'));
+  },
+  filename: (_req, file, callback) => {
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
+    const ext = extname(file.originalname);
+    callback(null, `${file.fieldname}-${uniqueSuffix}${ext}`);
+  },
+});
+
+/**
+ * Opciones para el FileInterceptor de foto de perfil.
+ */
+const perfilFotoInterceptorOptions = {
+  storage: storageConfig,
+  fileFilter: (_req: any, file: Express.Multer.File, callback: any) => {
+    if (!file.originalname.match(/\.(jpg|jpeg|png|gif|webp)$/)) {
+      return callback(
+        new BadRequestException(
+          'Solo se permiten archivos de imagen (jpg, jpeg, png, gif, webp).',
+        ),
+        false,
+      );
+    }
+    callback(null, true);
+  },
+  limits: { fileSize: 5 * 1024 * 1024 }, // 5 MB máximo
+};
 
 /**
  * Controlador de usuarios.
@@ -83,6 +125,41 @@ export class UsersController {
   }
 
   /**
+   * Endpoint para solicitar el restablecimiento de contraseña.
+   * Ruta: POST /users/forgot-password
+   *
+   * Rate limiting: Máximo 3 intentos por 10 minutos por IP.
+   *
+   * @param forgotPasswordDto - DTO con el email del usuario
+   * @returns Mensaje genérico de confirmación (no revela si el correo existe)
+   */
+  @Public()
+  @Throttle({ global: { limit: 3, ttl: 600000 } })
+  @Post('forgot-password')
+  async forgotPassword(@Body() forgotPasswordDto: ForgotPasswordDto) {
+    return this.usersService.forgotPassword(forgotPasswordDto.email);
+  }
+
+  /**
+   * Endpoint para restablecer la contraseña usando el token recibido por correo.
+   * Ruta: POST /users/reset-password
+   *
+   * Rate limiting: Máximo 5 intentos por 10 minutos por IP.
+   *
+   * @param resetPasswordDto - DTO con el token y la nueva contraseña
+   * @returns Mensaje de confirmación de restablecimiento exitoso
+   */
+  @Public()
+  @Throttle({ global: { limit: 5, ttl: 600000 } })
+  @Post('reset-password')
+  async resetPassword(@Body() resetPasswordDto: ResetPasswordDto) {
+    return this.usersService.resetPassword(
+      resetPasswordDto.token,
+      resetPasswordDto.password,
+    );
+  }
+
+  /**
    * Endpoint para iniciar sesión.
    * Ruta: POST /users/login
    *
@@ -139,11 +216,13 @@ export class UsersController {
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(Role.ADMIN, Role.MANAGER, Role.USER)
   @Patch('profile')
+  @UseInterceptors(FileInterceptor('foto', perfilFotoInterceptorOptions))
   async updateProfile(
     @Req() req: RequestWithUser,
     @Body() updateProfileDto: UpdateProfileDto,
+    @UploadedFile() file?: Express.Multer.File,
   ) {
-    return this.usersService.updateProfile(req.user.sub, updateProfileDto);
+    return this.usersService.updateProfile(req.user.sub, updateProfileDto, file);
   }
 
   /**

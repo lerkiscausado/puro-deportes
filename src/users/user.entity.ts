@@ -51,6 +51,10 @@ export class User {
   @Column({ nullable: true })
   direccion: string;
 
+  /** Ruta o enlace de la foto de perfil del usuario (opcional) */
+  @Column({ nullable: true })
+  foto: string;
+
   /**
    * Rol del usuario en la plataforma.
    * Valores posibles: 'admin', 'manager', 'user'.
@@ -70,6 +74,14 @@ export class User {
   /** Fecha y hora de expiración del token de verificación (null si no aplica) */
   @Column({ type: 'datetime', nullable: true })
   emailVerificationTokenExpiresAt: Date | null;
+
+  /** Hash SHA-256 del token de restablecimiento de contraseña (null si no solicitado o ya usado) */
+  @Column({ type: 'varchar', nullable: true })
+  passwordResetTokenHash: string | null;
+
+  /** Fecha y hora de expiración del token de restablecimiento de contraseña (null si no aplica) */
+  @Column({ type: 'datetime', nullable: true })
+  passwordResetTokenExpiresAt: Date | null;
 
   /** Fecha de creación del registro (generada automáticamente por TypeORM) */
   @CreateDateColumn()
