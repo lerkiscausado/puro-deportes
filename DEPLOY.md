@@ -25,7 +25,7 @@
 3. [Preparar almacenamiento persistente de uploads](#3-preparar-almacenamiento-persistente-de-uploads)
 4. [Configurar el archivo `.env` de producción](#4-configurar-el-archivo-env-de-producción)
 5. [Hardening de MySQL — CRÍTICO antes de exponer a internet](#5-hardening-de-mysql--crítico-antes-de-exponer-a-internet)
-6. [Ejecutar migraciones de base de datos](#6-ejecutar-migraciones-de-base-de-datos)
+6. [Migraciones de base de datos](#6-migraciones-de-base-de-datos)
 7. [Levantar el servicio con Docker Compose](#7-levantar-el-servicio-con-docker-compose)
 8. [Verificar la conexión end-to-end](#8-verificar-la-conexión-end-to-end)
 9. [Actualizar la aplicación (redeploy)](#9-actualizar-la-aplicación-redeploy)
@@ -303,26 +303,31 @@ mysql -u root -p -e "SELECT user, host FROM mysql.user WHERE user='adossofn_admi
 
 ---
 
-## 6. Ejecutar migraciones de base de datos
+## 6. Migraciones de base de datos
 
-Con `NODE_ENV=production`, `synchronize` está desactivado. Las migraciones
-deben correrse **antes** del primer arranque y después de cada deploy con
-cambios de esquema.
+> [!NOTE]
+> **Las migraciones se aplican automáticamente al arrancar el contenedor.**
+> El CMD del Dockerfile ejecuta `npm run migration:run` antes de iniciar NestJS.
+> Si no hay migraciones pendientes, el comando termina en milisegundos sin
+> afectar el tiempo de arranque. No necesitas ningún paso manual adicional.
+
+Con `NODE_ENV=production`, `synchronize` está desactivado. El arranque del
+contenedor aplica todas las migraciones pendientes antes de levantar la app,
+lo que garantiza que cualquier `docker compose up -d --build` deja la BD
+sincronizada automáticamente.
+
+### Aplicar migraciones sin reiniciar el contenedor (opcional)
+
+Si necesitas aplicar (o revisar) migraciones en un contenedor ya corriendo
+**sin reiniciarlo**, puedes hacerlo manualmente:
 
 ```bash
-cd /opt/puro-deportes
+# Opción A — dentro del contenedor ya corriendo
+docker compose exec backend npm run migration:run
 
-# Construir la imagen primero (necesaria para correr las migraciones)
-docker compose build
-
-# Correr las migraciones usando la imagen de producción con acceso a la red del host
-# --rm: elimina el contenedor temporal después de terminar
-docker compose run --rm backend npm run migration:run:prod
+# Opción B — contenedor temporal (si el servicio está caído)
+docker compose run --rm backend npm run migration:run
 ```
-
-> [!IMPORTANT]
-> `migration:run:prod` usa el JS compilado en `dist/` directamente (sin ts-node).
-> Es la variante correcta para la imagen de producción que no tiene devDependencies.
 
 ---
 
@@ -389,13 +394,11 @@ cd /opt/puro-deportes
 git pull origin main
 
 # 2. Reconstruir la imagen e iniciar el servicio actualizado
+#    Las migraciones pendientes se aplican AUTOMÁTICAMENTE al arrancar el contenedor.
+#    No es necesario ningún paso adicional de migraciones.
 docker compose up -d --build
 
-# 3. Si el deploy incluye nuevas migraciones de BD, correrlas
-#    (hacerlo DESPUÉS de que el nuevo contenedor esté arriba)
-docker compose exec backend npm run migration:run:prod
-
-# 4. Verificar que todo arrancó correctamente
+# 3. Verificar que todo arrancó correctamente (incluyendo las migraciones en los logs)
 docker compose logs -f backend
 ```
 
@@ -443,7 +446,7 @@ docker compose up -d --build
 ## 11. Referencia rápida de comandos
 
 ```bash
-# Levantar (o reconstruir)
+# Levantar (o reconstruir) — las migraciones se aplican automáticamente al arrancar
 docker compose up -d --build
 
 # Ver logs
@@ -452,8 +455,8 @@ docker compose logs -f backend
 # Parar el servicio
 docker compose down
 
-# Correr migraciones en producción
-docker compose exec backend npm run migration:run:prod
+# Aplicar migraciones manualmente SIN reiniciar el contenedor (caso excepcional)
+docker compose exec backend npm run migration:run
 
 # Shell interactivo dentro del contenedor
 docker compose exec backend sh

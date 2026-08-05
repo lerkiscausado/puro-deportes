@@ -51,6 +51,9 @@ USER appuser
 # El valor real se configura con la variable de entorno PORT (por defecto 3000).
 EXPOSE 3000
 
-# Inicia la aplicación ejecutando directamente el JS compilado (sin ts-node).
-# Las migraciones se deben correr ANTES de este comando (ver DEPLOY.md).
-CMD ["node", "dist/main"]
+# Aplica las migraciones pendientes y luego inicia la aplicación.
+# migration:run no hace nada y termina rápido si no hay migraciones pendientes,
+# así que no afecta el tiempo de arranque en el caso normal.
+# Esto garantiza que cualquier deploy futuro aplique migraciones automáticamente
+# sin depender de que alguien recuerde correr el paso manual por separado.
+CMD ["sh", "-c", "npm run migration:run && node dist/main"]
