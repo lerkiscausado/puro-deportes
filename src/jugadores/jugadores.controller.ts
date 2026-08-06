@@ -36,7 +36,7 @@ export class JugadoresController {
    * @param createJugadorDto - Datos del jugador a registrar
    * @returns El jugador creado
    */
-  @Roles(Role.ADMIN, Role.MANAGER, Role.USER)
+  @Roles(Role.ADMIN, Role.MANAGER)
   @Post()
   async create(@Body() createJugadorDto: CreateJugadorDto) {
     return this.jugadoresService.create(createJugadorDto);

@@ -38,7 +38,7 @@ export class PlanillasController {
    * @param req - Objeto request con el payload del JWT
    * @returns La planilla creada
    */
-  @Roles(Role.ADMIN, Role.MANAGER, Role.USER)
+  @Roles(Role.ADMIN, Role.MANAGER)
   @Post()
   async create(
     @Body() createPlanillaDto: CreatePlanillaDto,
@@ -106,7 +106,7 @@ export class PlanillasController {
    * @param updatePlanillaDto - Campos modificados
    * @returns La planilla modificada
    */
-  @Roles(Role.ADMIN, Role.MANAGER, Role.USER)
+  @Roles(Role.ADMIN, Role.MANAGER)
   @Patch(':id')
   async update(
     @Param('id', ParseIntPipe) id: number,
@@ -122,7 +122,7 @@ export class PlanillasController {
    * @param id - ID de la planilla a eliminar
    * @returns Mensaje de confirmación
    */
-  @Roles(Role.ADMIN, Role.MANAGER, Role.USER)
+  @Roles(Role.ADMIN, Role.MANAGER)
   @Delete(':id')
   async remove(@Param('id', ParseIntPipe) id: number) {
     await this.planillasService.remove(id);

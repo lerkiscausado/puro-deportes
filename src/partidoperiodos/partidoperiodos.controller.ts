@@ -24,7 +24,7 @@ import { Role } from '../users/enums/role.enum';
 export class PartidoPeriodosController {
   constructor(private readonly service: PartidoPeriodosService) {}
 
-  @Roles(Role.ADMIN, Role.MANAGER, Role.USER)
+  @Roles(Role.ADMIN, Role.MANAGER)
   @Post()
   async create(
     @Body() createDto: CreatePartidoPeriodoDto,
@@ -51,7 +51,7 @@ export class PartidoPeriodosController {
     return this.service.findOne(id);
   }
 
-  @Roles(Role.ADMIN, Role.MANAGER, Role.USER)
+  @Roles(Role.ADMIN, Role.MANAGER)
   @Patch(':id')
   async update(
     @Param('id', ParseIntPipe) id: number,
@@ -61,7 +61,7 @@ export class PartidoPeriodosController {
     return this.service.update(id, updateDto, req.user.sub, req.user.role);
   }
 
-  @Roles(Role.ADMIN, Role.MANAGER, Role.USER)
+  @Roles(Role.ADMIN, Role.MANAGER)
   @Delete(':id')
   async remove(
     @Param('id', ParseIntPipe) id: number,

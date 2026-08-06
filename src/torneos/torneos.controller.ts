@@ -66,7 +66,7 @@ export class TorneosController {
    * @param req - Objeto request con el payload del JWT
    * @returns El torneo creado con la relación al usuario
    */
-  @Roles(Role.USER, Role.ADMIN)
+  @Roles(Role.ADMIN, Role.MANAGER)
   @Post()
   @UseInterceptors(
     FileFieldsInterceptor(
@@ -172,7 +172,7 @@ export class TorneosController {
    * @param req - Objeto request con el payload del JWT
    * @returns El torneo modificado
    */
-  @Roles(Role.ADMIN, Role.MANAGER, Role.USER)
+  @Roles(Role.ADMIN, Role.MANAGER)
   @Patch(':id')
   async update(
     @Param('id', ParseIntPipe) id: number,

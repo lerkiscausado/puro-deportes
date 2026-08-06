@@ -18,7 +18,7 @@ import { getUploadsPath } from '../common/utils/uploads-path.util';
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Controller('uploads')
 export class UploadsController {
-  @Roles(Role.ADMIN, Role.MANAGER, Role.USER)
+  @Roles(Role.ADMIN, Role.MANAGER)
   @Post('logo')
   @UseInterceptors(
     FileInterceptor('logo', {

@@ -3,6 +3,7 @@ import {
   IsDate,
   IsEmail,
   IsEnum,
+  IsIn,
   IsNotEmpty,
   IsOptional,
   IsString,
@@ -66,4 +67,17 @@ export class CreateUserDto {
   @IsString()
   @IsNotEmpty()
   direccion?: string;
+
+  /**
+   * Tipo de usuario visible al público.
+   * - 'organizador' → role MANAGER (puede crear/editar/eliminar recursos)
+   * - 'seguidor'    → role USER    (solo lectura)
+   * Si no se envía, se aplica role USER por defecto.
+   * Este campo NUNCA se persiste directamente en la base de datos.
+   */
+  @IsOptional()
+  @IsIn(['organizador', 'seguidor'], {
+    message: 'El tipo de usuario debe ser "organizador" o "seguidor".',
+  })
+  tipoUsuario?: 'organizador' | 'seguidor';
 }

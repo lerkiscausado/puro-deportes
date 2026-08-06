@@ -4,6 +4,11 @@ import request from 'supertest';
 import { App } from 'supertest/types';
 import { AppModule } from './../src/app.module';
 
+// Aumentamos el timeout global para que la inicialización del módulo (y posibles
+// reintentos de conexión a la BD) tengan suficiente tiempo cuando los 3 suites
+// de e2e se ejecutan en paralelo (Jest usa workers independientes por defecto).
+jest.setTimeout(30000);
+
 describe('AppController (e2e)', () => {
   let app: INestApplication<App>;
 

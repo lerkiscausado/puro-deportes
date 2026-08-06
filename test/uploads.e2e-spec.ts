@@ -8,6 +8,10 @@ import { Role } from '../src/users/enums/role.enum';
 import * as fs from 'fs';
 import * as path from 'path';
 
+// Aumentamos el timeout global para que la inicialización del módulo (y posibles
+// reintentos de conexión a la BD) tengan suficiente tiempo.
+jest.setTimeout(30000);
+
 describe('UploadsController (e2e)', () => {
   let app: INestApplication<App>;
   let jwtService: JwtService;
@@ -24,8 +28,9 @@ describe('UploadsController (e2e)', () => {
     await app.init();
 
     jwtService = app.get(JwtService);
-    // Generamos un token válido para las pruebas
-    validToken = jwtService.sign({ sub: 1, role: Role.USER });
+    // Generamos un token con role MANAGER para las pruebas
+    // (el endpoint /uploads/logo ahora requiere ADMIN o MANAGER)
+    validToken = jwtService.sign({ sub: 1, role: Role.MANAGER });
   });
 
   afterAll(async () => {

@@ -597,4 +597,125 @@ describe('UsersService y CreateUserDto', () => {
       );
     });
   });
+
+  describe('register con tipoUsuario', () => {
+    const baseDto = {
+      email: 'org@example.com',
+      phone: '+573001234567',
+      password: 'Password123!',
+      name: 'Organizador Test',
+    };
+
+    it('con tipoUsuario="organizador" debe guardar role=MANAGER', async () => {
+      usersRepositoryMock.findOne.mockResolvedValue(null);
+      usersRepositoryMock.save.mockImplementation(async (u) => ({
+        id: 1,
+        ...u,
+      }));
+
+      await service.register({ ...baseDto, tipoUsuario: 'organizador' });
+
+      expect(usersRepositoryMock.create).toHaveBeenCalledWith(
+        expect.objectContaining({ role: 'manager' }),
+      );
+    });
+
+    it('sin tipoUsuario debe guardar role=USER (comportamiento por defecto)', async () => {
+      usersRepositoryMock.findOne.mockResolvedValue(null);
+      usersRepositoryMock.save.mockImplementation(async (u) => ({
+        id: 1,
+        ...u,
+      }));
+
+      await service.register({ ...baseDto });
+
+      expect(usersRepositoryMock.create).toHaveBeenCalledWith(
+        expect.objectContaining({ role: 'user' }),
+      );
+    });
+
+    it('con tipoUsuario="seguidor" debe guardar role=USER', async () => {
+      usersRepositoryMock.findOne.mockResolvedValue(null);
+      usersRepositoryMock.save.mockImplementation(async (u) => ({
+        id: 1,
+        ...u,
+      }));
+
+      await service.register({ ...baseDto, tipoUsuario: 'seguidor' });
+
+      expect(usersRepositoryMock.create).toHaveBeenCalledWith(
+        expect.objectContaining({ role: 'user' }),
+      );
+    });
+  });
+
+  describe('updateTipoUsuario', () => {
+    it('actualiza role a MANAGER cuando tipoUsuario="organizador"', async () => {
+      const mockUser = {
+        id: 1,
+        email: 'user@example.com',
+        role: 'user',
+        password: 'hashedPw',
+      } as User;
+
+      usersRepositoryMock.findOne.mockResolvedValue(mockUser);
+      usersRepositoryMock.save.mockImplementation(async (u) => u);
+
+      const result = await service.updateTipoUsuario(1, 'organizador');
+
+      expect(usersRepositoryMock.save).toHaveBeenCalledWith(
+        expect.objectContaining({ role: 'manager' }),
+      );
+      expect(result).not.toHaveProperty('password');
+    });
+
+    it('actualiza role a USER cuando tipoUsuario="seguidor"', async () => {
+      const mockUser = {
+        id: 2,
+        email: 'manager@example.com',
+        role: 'manager',
+        password: 'hashedPw',
+      } as User;
+
+      usersRepositoryMock.findOne.mockResolvedValue(mockUser);
+      usersRepositoryMock.save.mockImplementation(async (u) => u);
+
+      const result = await service.updateTipoUsuario(2, 'seguidor');
+
+      expect(usersRepositoryMock.save).toHaveBeenCalledWith(
+        expect.objectContaining({ role: 'user' }),
+      );
+      expect(result).not.toHaveProperty('password');
+    });
+
+    it('lanza BadRequestException si el usuario es ADMIN', async () => {
+      const mockAdmin = {
+        id: 99,
+        email: 'admin@example.com',
+        role: 'admin',
+        password: 'hashedPw',
+      } as User;
+
+      usersRepositoryMock.findOne.mockResolvedValue(mockAdmin);
+
+      await expect(
+        service.updateTipoUsuario(99, 'seguidor'),
+      ).rejects.toThrow(
+        new BadRequestException(
+          'Los administradores no pueden cambiar su tipo de usuario desde aquí',
+        ),
+      );
+
+      expect(usersRepositoryMock.save).not.toHaveBeenCalled();
+    });
+
+    it('lanza UnauthorizedException si el usuario no existe', async () => {
+      usersRepositoryMock.findOne.mockResolvedValue(null);
+
+      await expect(
+        service.updateTipoUsuario(999, 'organizador'),
+      ).rejects.toThrow(UnauthorizedException);
+    });
+  });
 });
+

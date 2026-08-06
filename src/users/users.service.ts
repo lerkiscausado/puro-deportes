@@ -16,6 +16,7 @@ import { User } from './user.entity';
 import { CreateUserDto } from './dto/create-user.dto';
 import { LoginUserDto } from './dto/login-user.dto';
 import { UpdateProfileDto } from './dto/update-profile.dto';
+import { Role } from './enums/role.enum';
 import { EmailService } from '../email/email.service';
 import { getUploadsPath } from '../common/utils/uploads-path.util';
 
@@ -76,10 +77,15 @@ export class UsersService {
       .digest('hex');
     const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
 
+    // Determina el rol según tipoUsuario (nunca se persiste el campo tipoUsuario directamente)
+    const role =
+      createUserDto.tipoUsuario === 'organizador' ? Role.MANAGER : Role.USER;
+
     // Crea la instancia del usuario con la contraseña hasheada y datos de verificación
     const user = this.usersRepository.create({
       ...createUserDto,
       password: hashedPassword,
+      role,
       emailVerified: false,
       emailVerificationTokenHash: tokenHash,
       emailVerificationTokenExpiresAt: expiresAt,
@@ -451,6 +457,48 @@ export class UsersService {
     const updatedUser = await this.usersRepository.save(user);
 
     // Excluye la contraseña de la respuesta
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { password, ...result } = updatedUser;
+    return result;
+  }
+
+  /**
+   * Actualiza el tipo de usuario (rol público) del usuario autenticado.
+   *
+   * Reglas:
+   * - Solo puede ser llamado por usuarios no-ADMIN.
+   * - 'organizador' → Role.MANAGER
+   * - 'seguidor'    → Role.USER
+   * - Siempre usa el ID del JWT (nunca un ID externo).
+   *
+   * @param userId - ID del usuario extraído del token JWT
+   * @param tipoUsuario - Nuevo tipo de usuario ('organizador' | 'seguidor')
+   * @returns El usuario actualizado sin el campo password
+   * @throws BadRequestException si el usuario es ADMIN
+   * @throws UnauthorizedException si el usuario no existe
+   */
+  async updateTipoUsuario(
+    userId: number,
+    tipoUsuario: 'organizador' | 'seguidor',
+  ): Promise<Omit<User, 'password'>> {
+    const user = await this.usersRepository.findOne({
+      where: { id: userId },
+    });
+
+    if (!user) {
+      throw new UnauthorizedException('Usuario no encontrado');
+    }
+
+    if (user.role === Role.ADMIN) {
+      throw new BadRequestException(
+        'Los administradores no pueden cambiar su tipo de usuario desde aquí',
+      );
+    }
+
+    user.role = tipoUsuario === 'organizador' ? Role.MANAGER : Role.USER;
+
+    const updatedUser = await this.usersRepository.save(user);
+
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { password, ...result } = updatedUser;
     return result;

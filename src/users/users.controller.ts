@@ -23,6 +23,7 @@ import { VerifyEmailDto } from './dto/verify-email.dto';
 import { ResendVerificationDto } from './dto/resend-verification.dto';
 import { ForgotPasswordDto } from './dto/forgot-password.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
+import { UpdateTipoUsuarioDto } from './dto/update-tipo-usuario.dto';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import { RolesGuard } from './guards/roles.guard';
 import { Roles } from './decorators/roles.decorator';
@@ -255,5 +256,29 @@ export class UsersController {
   @Get('management')
   management() {
     return { message: 'Bienvenido al panel de gestión' };
+  }
+
+  /**
+   * Endpoint para actualizar el tipo de usuario (rol público) del usuario autenticado.
+   * Ruta: PATCH /users/tipo-usuario
+   *
+   * Protegido solo con JwtAuthGuard (cualquier usuario autenticado puede llamarlo).
+   * No expone @Roles para no restringir por rol en el guard.
+   * La lógica interna rechaza si el usuario es ADMIN.
+   *
+   * @param req - Objeto request con el payload del JWT
+   * @param updateTipoUsuarioDto - DTO con el nuevo tipo ('organizador' | 'seguidor')
+   * @returns El usuario actualizado sin el campo password
+   */
+  @UseGuards(JwtAuthGuard)
+  @Patch('tipo-usuario')
+  async updateTipoUsuario(
+    @Req() req: RequestWithUser,
+    @Body() updateTipoUsuarioDto: UpdateTipoUsuarioDto,
+  ) {
+    return this.usersService.updateTipoUsuario(
+      req.user.sub,
+      updateTipoUsuarioDto.tipoUsuario,
+    );
   }
 }

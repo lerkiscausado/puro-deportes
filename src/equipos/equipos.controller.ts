@@ -85,7 +85,7 @@ export class EquiposController {
    * @param file - Archivo de imagen subido (opcional)
    * @returns El equipo creado con la relación a su usuario
    */
-  @Roles(Role.ADMIN, Role.MANAGER, Role.USER)
+  @Roles(Role.ADMIN, Role.MANAGER)
   @Post()
   @UseInterceptors(FileInterceptor('foto', equipoFotoInterceptorOptions))
   async create(
@@ -147,7 +147,7 @@ export class EquiposController {
    * @param file - Archivo de imagen subido si se reemplaza la foto (opcional)
    * @returns El equipo modificado
    */
-  @Roles(Role.ADMIN, Role.MANAGER, Role.USER)
+  @Roles(Role.ADMIN, Role.MANAGER)
   @Patch(':id')
   @UseInterceptors(FileInterceptor('foto', equipoFotoInterceptorOptions))
   async update(
@@ -173,7 +173,7 @@ export class EquiposController {
    * @param req - Objeto request con el payload del JWT
    * @returns Mensaje de confirmación del equipo eliminado
    */
-  @Roles(Role.ADMIN, Role.MANAGER, Role.USER)
+  @Roles(Role.ADMIN, Role.MANAGER)
   @Delete(':id')
   async remove(
     @Param('id', ParseIntPipe) id: number,

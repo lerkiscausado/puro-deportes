@@ -40,7 +40,7 @@ export class EscenariosController {
    * @param req - Objeto request con el payload del JWT
    * @returns El escenario creado con la relación a su usuario
    */
-  @Roles(Role.ADMIN, Role.MANAGER, Role.USER)
+  @Roles(Role.ADMIN, Role.MANAGER)
   @Post()
   async create(
     @Body() createEscenarioDto: CreateEscenarioDto,
@@ -120,7 +120,7 @@ export class EscenariosController {
    * @param req - Objeto request con el payload del JWT
    * @returns Mensaje de confirmación del escenario eliminado
    */
-  @Roles(Role.ADMIN, Role.MANAGER, Role.USER)
+  @Roles(Role.ADMIN, Role.MANAGER)
   @Delete(':id')
   async remove(
     @Param('id', ParseIntPipe) id: number,

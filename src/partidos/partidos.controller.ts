@@ -40,7 +40,7 @@ export class PartidosController {
    * @param req - Objeto request con el payload del JWT
    * @returns El partido creado con todas sus relaciones
    */
-  @Roles(Role.ADMIN, Role.MANAGER, Role.USER)
+  @Roles(Role.ADMIN, Role.MANAGER)
   @Post()
   async create(
     @Body() createPartidoDto: CreatePartidoDto,
@@ -164,7 +164,7 @@ export class PartidosController {
    * @param req - Objeto request con el payload del JWT
    * @returns El partido modificado
    */
-  @Roles(Role.ADMIN, Role.MANAGER, Role.USER)
+  @Roles(Role.ADMIN, Role.MANAGER)
   @Patch(':id')
   async update(
     @Param('id', ParseIntPipe) id: number,
@@ -187,7 +187,7 @@ export class PartidosController {
    * @param req - Objeto request con el payload del JWT
    * @returns Mensaje de confirmación del partido eliminado
    */
-  @Roles(Role.ADMIN, Role.MANAGER, Role.USER)
+  @Roles(Role.ADMIN, Role.MANAGER)
   @Delete(':id')
   async remove(
     @Param('id', ParseIntPipe) id: number,

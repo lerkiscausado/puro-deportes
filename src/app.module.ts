@@ -17,6 +17,7 @@ import { PlanillasModule } from './planillas/planillas.module';
 import { PartidoPeriodosModule } from './partidoperiodos/partidoperiodos.module';
 import { NoticiasModule } from './noticias/noticias.module';
 import { CustomThrottlerGuard } from './common/guards/custom-throttler.guard';
+import { FavoritosModule } from './favoritos/favoritos.module';
 
 @Module({
   imports: [
@@ -81,6 +82,7 @@ import { CustomThrottlerGuard } from './common/guards/custom-throttler.guard';
     PlanillasModule,
     PartidoPeriodosModule,
     NoticiasModule,
+    FavoritosModule,
   ],
   controllers: [AppController],
   providers: [

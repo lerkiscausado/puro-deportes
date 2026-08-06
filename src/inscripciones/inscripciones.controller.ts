@@ -39,7 +39,7 @@ export class InscripcionesController {
    * @param req - Objeto request con el payload del JWT
    * @returns La inscripción creada
    */
-  @Roles(Role.ADMIN, Role.MANAGER, Role.USER)
+  @Roles(Role.ADMIN, Role.MANAGER)
   @Post()
   async create(
     @Body() createInscripcionDto: CreateInscripcionDto,
@@ -121,7 +121,7 @@ export class InscripcionesController {
    * @param req - Objeto request con el payload del JWT
    * @returns La inscripción modificada
    */
-  @Roles(Role.ADMIN, Role.MANAGER, Role.USER)
+  @Roles(Role.ADMIN, Role.MANAGER)
   @Patch(':id')
   async update(
     @Param('id', ParseIntPipe) id: number,
@@ -144,7 +144,7 @@ export class InscripcionesController {
    * @param req - Objeto request con el payload del JWT
    * @returns Mensaje de confirmación de la eliminación
    */
-  @Roles(Role.ADMIN, Role.MANAGER, Role.USER)
+  @Roles(Role.ADMIN, Role.MANAGER)
   @Delete(':id')
   async remove(
     @Param('id', ParseIntPipe) id: number,
