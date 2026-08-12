@@ -18,6 +18,7 @@ import { PartidoPeriodosModule } from './partidoperiodos/partidoperiodos.module'
 import { NoticiasModule } from './noticias/noticias.module';
 import { CustomThrottlerGuard } from './common/guards/custom-throttler.guard';
 import { FavoritosModule } from './favoritos/favoritos.module';
+import { VisitasModule } from './visitas/visitas.module';
 
 @Module({
   imports: [
@@ -83,6 +84,7 @@ import { FavoritosModule } from './favoritos/favoritos.module';
     PartidoPeriodosModule,
     NoticiasModule,
     FavoritosModule,
+    VisitasModule,
   ],
   controllers: [AppController],
   providers: [
