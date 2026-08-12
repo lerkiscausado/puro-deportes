@@ -108,6 +108,16 @@ export class NoticiasController {
   }
 
   /**
+   * Endpoint público para obtener una noticia específica por su slug.
+   * Ruta: GET /noticias/publica/:slug
+   */
+  @Public()
+  @Get('publica/:slug')
+  async findPublicBySlug(@Param('slug') slug: string) {
+    return this.noticiasService.findPublicBySlug(slug);
+  }
+
+  /**
    * Endpoint para obtener una noticia específica por su ID.
    * Ruta: GET /noticias/:id
    *

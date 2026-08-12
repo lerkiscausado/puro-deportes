@@ -5,8 +5,10 @@ import {
   HttpCode,
   HttpStatus,
   Post,
+  Req,
   UseGuards,
 } from '@nestjs/common';
+import type { Request } from 'express';
 import { Throttle } from '@nestjs/throttler';
 import { VisitasService } from './visitas.service';
 import { RegistrarVisitaDto } from './dto/registrar-visita.dto';
@@ -36,17 +38,22 @@ export class VisitasController {
    * - Respuesta inmediata (201) — el guardado se inicia en background para
    *   no bloquear al cliente.
    *
+   * @param req - Objeto de petición HTTP de Express
    * @param dto - DTO con la ruta visitada
    */
   @Public()
   @Throttle({ global: { limit: 30, ttl: 60000 } })
   @Post('registrar')
   @HttpCode(HttpStatus.CREATED)
-  registrar(@Body() dto: RegistrarVisitaDto): { ok: boolean } {
+  registrar(
+    @Req() req: Request,
+    @Body() dto: RegistrarVisitaDto,
+  ): { ok: boolean } {
     // Fire-and-forget: lanzamos el guardado sin await para responder de inmediato.
     // El .catch(() => {}) evita que un fallo de BD (ej. conexión cerrada al
     // terminar tests) cause un UnhandledPromiseRejection que crashee el proceso.
-    this.visitasService.registrar(dto.ruta).catch(() => {});
+    const userAgent = req.headers['user-agent'];
+    this.visitasService.registrar(dto.ruta, userAgent).catch(() => {});
     return { ok: true };
   }
 

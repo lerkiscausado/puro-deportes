@@ -5,6 +5,7 @@ import {
   Index,
   PrimaryGeneratedColumn,
 } from 'typeorm';
+import { TipoDispositivo } from './enums/tipo-dispositivo.enum';
 
 /**
  * Entidad Visita - Representa la tabla 'visitas' en la base de datos.
@@ -30,6 +31,14 @@ export class Visita {
   /** Ruta de la página visitada (ej: "/torneos", "/noticias/5") */
   @Column({ type: 'varchar', length: 255 })
   ruta: string;
+
+  /** Tipo de dispositivo desde el cual se registró la visita */
+  @Column({
+    type: 'enum',
+    enum: TipoDispositivo,
+    default: TipoDispositivo.ESCRITORIO,
+  })
+  dispositivo: TipoDispositivo;
 
   /** Fecha y hora en que se registró la visita (generada automáticamente) */
   @CreateDateColumn()

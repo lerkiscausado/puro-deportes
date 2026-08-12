@@ -67,4 +67,9 @@ describe('AppController (e2e)', () => {
     expect(response.status).toBe(200);
     expect(Array.isArray(response.body)).toBe(true);
   });
+
+  it('GET /api/noticias/publica/:slug → responde sin requerir JWT guard (404 si no existe)', async () => {
+    const response = await request(app.getHttpServer()).get('/api/noticias/publica/slug-inexistente');
+    expect(response.status).toBe(404);
+  });
 });

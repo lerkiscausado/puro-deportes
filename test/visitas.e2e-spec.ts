@@ -143,6 +143,9 @@ describe('Visitas (e2e)', () => {
       expect(res.body).toHaveProperty('visitasUltimos30Dias');
       expect(res.body).toHaveProperty('rutasMasVisitadas');
       expect(Array.isArray(res.body.rutasMasVisitadas)).toBe(true);
+      expect(res.body).toHaveProperty('dispositivos');
+      expect(typeof res.body.dispositivos.movil).toBe('number');
+      expect(typeof res.body.dispositivos.escritorio).toBe('number');
 
       // Los valores deben ser números
       expect(typeof res.body.totalVisitas).toBe('number');

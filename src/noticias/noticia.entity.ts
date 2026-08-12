@@ -33,6 +33,10 @@ export class Noticia {
   @Column({ type: 'varchar', nullable: true })
   foto: string | null;
 
+  /** Slug único para la URL pública de la noticia */
+  @Column({ type: 'varchar', length: 255, nullable: true, unique: true })
+  slug: string | null;
+
   /** Deporte al que pertenece la noticia */
   @Column({
     type: 'enum',

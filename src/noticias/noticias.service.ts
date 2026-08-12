@@ -17,6 +17,57 @@ export class NoticiasService {
   ) {}
 
   /**
+   * Genera un slug URL-friendly a partir del título suministrado.
+   *
+   * @param titulo - Título de la noticia
+   * @returns Slug formateado
+   */
+  private generarSlug(titulo: string): string {
+    let slug = titulo
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/-+/g, '-')
+      .replace(/^-+|-+$/g, '');
+
+    if (slug.length > 100) {
+      let truncated = slug.substring(0, 100);
+      const lastDash = truncated.lastIndexOf('-');
+      if (lastDash > 0) {
+        truncated = truncated.substring(0, lastDash);
+      }
+      slug = truncated.replace(/^-+|-+$/g, '');
+    }
+
+    return slug || 'noticia';
+  }
+
+  /**
+   * Genera un slug único asegurando que no colisione con registros existentes en BD.
+   * Si ya existe un slug idéntico, le agrega un sufijo incremental (-2, -3, etc.).
+   *
+   * @param titulo - Título de la noticia
+   * @returns Slug único para la base de datos
+   */
+  private async generarSlugUnico(titulo: string): Promise<string> {
+    const baseSlug = this.generarSlug(titulo);
+    let slug = baseSlug;
+    let contador = 1;
+
+    while (true) {
+      const existing = await this.noticiasRepository.findOne({
+        where: { slug },
+      });
+      if (!existing) {
+        return slug;
+      }
+      contador++;
+      slug = `${baseSlug}-${contador}`;
+    }
+  }
+
+  /**
    * Crea una nueva noticia en la base de datos.
    *
    * @param createNoticiaDto - Datos para la creación de la noticia
@@ -27,8 +78,10 @@ export class NoticiasService {
     createNoticiaDto: CreateNoticiaDto,
     fotoFilename?: string,
   ): Promise<Noticia> {
+    const slug = await this.generarSlugUnico(createNoticiaDto.titulo);
     const noticia = this.noticiasRepository.create({
       ...createNoticiaDto,
+      slug,
       foto: fotoFilename || null,
     });
     return this.noticiasRepository.save(noticia);
@@ -59,6 +112,25 @@ export class NoticiasService {
       },
       take: 30,
     });
+  }
+
+  /**
+   * Obtiene una noticia pública por su slug único.
+   *
+   * @param slug - Slug de la noticia a buscar
+   * @returns La noticia correspondiente
+   * @throws NotFoundException si la noticia no existe
+   */
+  async findPublicBySlug(slug: string): Promise<Noticia> {
+    const noticia = await this.noticiasRepository.findOne({
+      where: { slug },
+    });
+
+    if (!noticia) {
+      throw new NotFoundException('Noticia no encontrada');
+    }
+
+    return noticia;
   }
 
   /**

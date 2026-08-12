@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Visita } from './visita.entity';
+import { TipoDispositivo } from './enums/tipo-dispositivo.enum';
 
 /**
  * Resultado de una ruta en el ranking de más visitadas.
@@ -20,6 +21,10 @@ export interface EstadisticasVisitas {
   visitasUltimos7Dias: number;
   visitasUltimos30Dias: number;
   rutasMasVisitadas: RutaVisitada[];
+  dispositivos: {
+    movil: number;
+    escritorio: number;
+  };
 }
 
 /**
@@ -37,14 +42,32 @@ export class VisitasService {
   ) {}
 
   /**
+   * Detecta si el User-Agent recibido corresponde a un dispositivo móvil o de escritorio.
+   *
+   * @param userAgent - Header User-Agent de la petición HTTP
+   * @returns TipoDispositivo (MOVIL o ESCRITORIO)
+   */
+  private detectarDispositivo(userAgent?: string): TipoDispositivo {
+    if (!userAgent) {
+      return TipoDispositivo.ESCRITORIO;
+    }
+    const regexMovil = /Mobile|Android|iPhone|iPad|iPod|Windows Phone|BlackBerry/i;
+    return regexMovil.test(userAgent)
+      ? TipoDispositivo.MOVIL
+      : TipoDispositivo.ESCRITORIO;
+  }
+
+  /**
    * Registra una nueva visita para la ruta indicada.
    * La operación es fire-and-forget desde el punto de vista del cliente:
    * el controlador no espera el resultado para responder.
    *
    * @param ruta - Ruta pública visitada (ej: "/torneos")
+   * @param userAgent - Header User-Agent opcional para detectar dispositivo
    */
-  async registrar(ruta: string): Promise<void> {
-    const visita = this.visitasRepository.create({ ruta });
+  async registrar(ruta: string, userAgent?: string): Promise<void> {
+    const dispositivo = this.detectarDispositivo(userAgent);
+    const visita = this.visitasRepository.create({ ruta, dispositivo });
     await this.visitasRepository.save(visita);
   }
 
@@ -57,6 +80,7 @@ export class VisitasService {
    * - visitasUltimos7Dias: visitas de los últimos 7 días.
    * - visitasUltimos30Dias: visitas de los últimos 30 días.
    * - rutasMasVisitadas: top 10 rutas por cantidad de visitas en los últimos 30 días.
+   * - dispositivos: conteo de visitas por tipo (móvil vs escritorio) en los últimos 30 días.
    */
   async obtenerEstadisticas(): Promise<EstadisticasVisitas> {
     const ahora = new Date();
@@ -126,12 +150,37 @@ export class VisitasService {
       cantidad: parseInt(row.cantidad, 10),
     }));
 
+    // ── Conteo por dispositivo (últimos 30 días) ──────────────────────────────
+
+    const dispositivosRaw = await this.visitasRepository
+      .createQueryBuilder('v')
+      .select('v.dispositivo', 'dispositivo')
+      .addSelect('COUNT(*)', 'cantidad')
+      .where('v.createdAt >= :fecha', { fecha: hace30Dias })
+      .groupBy('v.dispositivo')
+      .getRawMany<{ dispositivo: string; cantidad: string }>();
+
+    const dispositivos = {
+      movil: 0,
+      escritorio: 0,
+    };
+
+    for (const row of dispositivosRaw) {
+      const cantidad = parseInt(row.cantidad, 10);
+      if (row.dispositivo === TipoDispositivo.MOVIL) {
+        dispositivos.movil = cantidad;
+      } else if (row.dispositivo === TipoDispositivo.ESCRITORIO) {
+        dispositivos.escritorio = cantidad;
+      }
+    }
+
     return {
       totalVisitas,
       visitasHoy,
       visitasUltimos7Dias,
       visitasUltimos30Dias,
       rutasMasVisitadas,
+      dispositivos,
     };
   }
 }
