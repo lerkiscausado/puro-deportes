@@ -281,6 +281,11 @@ describe('EstadisticasService', () => {
       // 1*3 + 1*3 + 1*2 = 8
       expect(jugador1.totalPuntos).toBe(8);
       expect(jugador1.estadisticas).toHaveLength(3); // 3 filas discretas
+      expect(jugador1.estadisticas).toEqual([
+        { tipoEstadisticaId: 1, tipo: 'Triple', cantidad: 1, puntos: 3 },
+        { tipoEstadisticaId: 1, tipo: 'Triple', cantidad: 1, puntos: 3 },
+        { tipoEstadisticaId: 2, tipo: 'Doble', cantidad: 1, puntos: 2 },
+      ]);
     });
   });
 

@@ -167,7 +167,12 @@ export class EstadisticasService {
       {
         jugador: { id: number; nombre: string; apellidos: string };
         equipo: { id: number; nombre: string };
-        estadisticas: Array<{ tipo: string; cantidad: number; puntos: number }>;
+        estadisticas: Array<{
+          tipoEstadisticaId: number;
+          tipo: string;
+          cantidad: number;
+          puntos: number;
+        }>;
         totalPuntos: number;
       }
     >();
@@ -193,6 +198,7 @@ export class EstadisticasService {
       const entrada = mapa.get(jugadorId)!;
       const puntosTipo = fila.tipoEstadistica?.puntos ?? 0;
       entrada.estadisticas.push({
+        tipoEstadisticaId: fila.tipoEstadistica?.id,
         tipo: fila.tipoEstadistica?.nombre,
         cantidad: fila.cantidad,
         puntos: puntosTipo,
