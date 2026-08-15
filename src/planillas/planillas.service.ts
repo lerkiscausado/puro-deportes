@@ -4,7 +4,7 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, Not } from 'typeorm';
+import { Repository, Not, QueryFailedError } from 'typeorm';
 import { Planilla } from './planilla.entity';
 import { CreatePlanillaDto } from './dto/create-planilla.dto';
 import { UpdatePlanillaDto } from './dto/update-planilla.dto';
@@ -119,7 +119,25 @@ export class PlanillasService {
       );
     }
 
-    // 6. Crear y guardar planilla
+    // 6. Validar que el número de camiseta no esté ya asignado en este equipo y torneo
+    const existenteCamiseta = await this.planillasRepository.findOne({
+      where: {
+        torneo: { id: idTorneo },
+        equipo: { id: idEquipo },
+        numeroCamiseta,
+      },
+      relations: {
+        jugador: true,
+      },
+    });
+
+    if (existenteCamiseta) {
+      throw new BadRequestException(
+        `El número de camiseta ${numeroCamiseta} ya está asignado a "${existenteCamiseta.jugador.nombre} ${existenteCamiseta.jugador.apellidos}" en el equipo "${equipo.nombre}".`,
+      );
+    }
+
+    // 7. Crear y guardar planilla
     const planilla = this.planillasRepository.create({
       user,
       torneo,
@@ -129,8 +147,20 @@ export class PlanillasService {
       estado: estado || EstadoPlanilla.ACTIVO,
     });
 
-    const guardada = await this.planillasRepository.save(planilla);
-    return this.findOne(guardada.id);
+    try {
+      const guardada = await this.planillasRepository.save(planilla);
+      return this.findOne(guardada.id);
+    } catch (error) {
+      if (
+        error instanceof QueryFailedError &&
+        (error as any).driverError?.code === 'ER_DUP_ENTRY'
+      ) {
+        throw new BadRequestException(
+          'Ese número de camiseta ya fue asignado a otro jugador de este equipo, intenta con otro número.',
+        );
+      }
+      throw error;
+    }
   }
 
   /**
@@ -210,7 +240,8 @@ export class PlanillasService {
   ): Promise<Planilla> {
     const planilla = await this.findOne(id);
 
-    const { idTorneo, idEquipo, idJugador, ...resto } = updatePlanillaDto;
+    const { idTorneo, idEquipo, idJugador, numeroCamiseta, ...resto } =
+      updatePlanillaDto;
 
     // Si se pasa un nuevo idTorneo
     if (idTorneo !== undefined) {
@@ -249,8 +280,12 @@ export class PlanillasService {
 
     const checkTorneoId =
       idTorneo !== undefined ? idTorneo : planilla.torneo.id;
+    const checkEquipoId =
+      idEquipo !== undefined ? idEquipo : planilla.equipo.id;
     const checkJugadorId =
       idJugador !== undefined ? idJugador : planilla.jugador.id;
+    const checkNumeroCamiseta =
+      numeroCamiseta !== undefined ? numeroCamiseta : planilla.numeroCamiseta;
 
     // Verificar si el jugador ya está registrado de forma activa en cualquier otro equipo para este torneo
     const existenteEnTorneo = await this.planillasRepository.findOne({
@@ -287,10 +322,50 @@ export class PlanillasService {
       );
     }
 
-    const planillaActualizada = this.planillasRepository.merge(planilla, resto);
-    await this.planillasRepository.save(planillaActualizada);
+    // Validar si el número de camiseta ya está ocupado en el equipo y torneo por otra planilla
+    if (
+      numeroCamiseta !== undefined ||
+      idEquipo !== undefined ||
+      idTorneo !== undefined
+    ) {
+      const existenteCamiseta = await this.planillasRepository.findOne({
+        where: {
+          torneo: { id: checkTorneoId },
+          equipo: { id: checkEquipoId },
+          numeroCamiseta: checkNumeroCamiseta,
+          id: Not(id),
+        },
+        relations: {
+          jugador: true,
+        },
+      });
 
-    return this.findOne(id);
+      if (existenteCamiseta) {
+        throw new BadRequestException(
+          `El número de camiseta ${checkNumeroCamiseta} ya está asignado a "${existenteCamiseta.jugador.nombre} ${existenteCamiseta.jugador.apellidos}" en el equipo "${planilla.equipo.nombre}".`,
+        );
+      }
+    }
+
+    const planillaActualizada = this.planillasRepository.merge(planilla, {
+      ...resto,
+      ...(numeroCamiseta !== undefined ? { numeroCamiseta } : {}),
+    });
+
+    try {
+      await this.planillasRepository.save(planillaActualizada);
+      return this.findOne(id);
+    } catch (error) {
+      if (
+        error instanceof QueryFailedError &&
+        (error as any).driverError?.code === 'ER_DUP_ENTRY'
+      ) {
+        throw new BadRequestException(
+          'Ese número de camiseta ya fue asignado a otro jugador de este equipo, intenta con otro número.',
+        );
+      }
+      throw error;
+    }
   }
 
   /**
