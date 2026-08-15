@@ -19,6 +19,8 @@ import { NoticiasModule } from './noticias/noticias.module';
 import { CustomThrottlerGuard } from './common/guards/custom-throttler.guard';
 import { FavoritosModule } from './favoritos/favoritos.module';
 import { VisitasModule } from './visitas/visitas.module';
+import { TiposEstadisticaModule } from './tipos-estadistica/tipos-estadistica.module';
+import { EstadisticasModule } from './estadisticas/estadisticas.module';
 
 @Module({
   imports: [
@@ -85,6 +87,8 @@ import { VisitasModule } from './visitas/visitas.module';
     NoticiasModule,
     FavoritosModule,
     VisitasModule,
+    TiposEstadisticaModule,
+    EstadisticasModule,
   ],
   controllers: [AppController],
   providers: [
