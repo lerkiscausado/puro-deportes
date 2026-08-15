@@ -11,6 +11,9 @@ import { RegistrarEstadisticaDto } from './dto/registrar-estadistica.dto';
 
 /**
  * Servicio para gestión y cálculo de estadísticas de jugadores por partido y torneo.
+ *
+ * Modelo de datos: cada fila es un EVENTO DISCRETO (ej. cada gol, cada tiro libre).
+ * Se permiten múltiples filas con la misma combinación jugador+partido+tipo.
  */
 @Injectable()
 export class EstadisticasService {
@@ -28,13 +31,13 @@ export class EstadisticasService {
   ) {}
 
   /**
-   * Registra o actualiza (UPSERT) la estadística de un jugador en un partido para un tipo específico.
-   * Si ya existe el registro (jugador+partido+tipoEstadistica), actualiza la cantidad y el usuario.
-   * Si no existe, crea una nueva fila.
+   * Registra UN NUEVO evento estadístico discreto de un jugador en un partido.
+   * Siempre crea una fila nueva — no realiza upsert.
+   * Se permiten múltiples registros del mismo tipo para el mismo jugador/partido.
    *
    * @param userId - ID del usuario administrador o manager que realiza el registro
-   * @param dto - Datos de la estadística
-   * @returns Registro estadístico guardado (sin exponer el objeto user completo)
+   * @param dto - Datos de la estadística (jugadorId, partidoId, equipoId, tipoEstadisticaId, cantidad)
+   * @returns Registro estadístico creado (sin exponer el objeto user completo)
    */
   async registrar(
     userId: number,
@@ -74,29 +77,15 @@ export class EstadisticasService {
       );
     }
 
-    let estadistica = await this.estadisticaRepository.findOne({
-      where: {
-        jugador: { id: dto.jugadorId },
-        partido: { id: dto.partidoId },
-        tipoEstadistica: { id: dto.tipoEstadisticaId },
-      },
-      relations: ['jugador', 'partido', 'equipo', 'tipoEstadistica'],
+    // Siempre crea una nueva fila — modelo de eventos discretos
+    const estadistica = this.estadisticaRepository.create({
+      jugador,
+      partido,
+      equipo,
+      tipoEstadistica,
+      user: { id: userId } as User,
+      cantidad: dto.cantidad,
     });
-
-    if (estadistica) {
-      estadistica.cantidad = dto.cantidad;
-      estadistica.equipo = equipo;
-      estadistica.user = { id: userId } as User;
-    } else {
-      estadistica = this.estadisticaRepository.create({
-        jugador,
-        partido,
-        equipo,
-        tipoEstadistica,
-        user: { id: userId } as User,
-        cantidad: dto.cantidad,
-      });
-    }
 
     const guardado = await this.estadisticaRepository.save(estadistica);
 
@@ -124,8 +113,45 @@ export class EstadisticasService {
   }
 
   /**
+   * Elimina el evento estadístico MÁS RECIENTE que coincida con la combinación
+   * jugador + partido + tipoEstadistica. Útil para deshacer el último registro
+   * capturado en tiempo real durante un partido.
+   *
+   * @param jugadorId - ID del jugador
+   * @param partidoId - ID del partido
+   * @param tipoEstadisticaId - ID del tipo de estadística
+   * @returns Mensaje de confirmación
+   * @throws NotFoundException si no existe ninguna fila para esa combinación
+   */
+  async eliminarUltimoRegistro(
+    jugadorId: number,
+    partidoId: number,
+    tipoEstadisticaId: number,
+  ): Promise<{ message: string }> {
+    const ultimo = await this.estadisticaRepository.findOne({
+      where: {
+        jugador: { id: jugadorId },
+        partido: { id: partidoId },
+        tipoEstadistica: { id: tipoEstadisticaId },
+      },
+      order: { createdAt: 'DESC' },
+    });
+
+    if (!ultimo) {
+      throw new NotFoundException(
+        `No se encontró ningún registro para jugador ${jugadorId}, partido ${partidoId} y tipo ${tipoEstadisticaId}`,
+      );
+    }
+
+    await this.estadisticaRepository.remove(ultimo);
+    return { message: 'Último registro de estadística eliminado correctamente' };
+  }
+
+  /**
    * Retorna las estadísticas de un partido específico agrupadas por jugador,
    * incluyendo el total de puntos sumando (cantidad * tipoEstadistica.puntos).
+   * Funciona correctamente tanto con el modelo acumulado como con el de eventos
+   * discretos, ya que suma cantidad*puntos de todas las filas del jugador.
    *
    * @param partidoId - ID del partido
    * @returns Array de jugadores con sus estadísticas y total de puntos
@@ -180,6 +206,7 @@ export class EstadisticasService {
   /**
    * Retorna los líderes de un torneo ordenados DESC por total de puntos o por tipo de estadística específica.
    * Limita a los primeros 20.
+   * Funciona correctamente con el modelo de eventos discretos ya que usa SUM() en SQL.
    *
    * @param torneoId - ID del torneo
    * @param tipoEstadisticaId - ID opcional de tipo de estadística para filtrar (ej. solo goles)
@@ -239,6 +266,8 @@ export class EstadisticasService {
 
   /**
    * Retorna las estadísticas globales acumuladas de un jugador a lo largo de toda su carrera.
+   * Funciona correctamente con el modelo de eventos discretos ya que acumula
+   * la cantidad de todas las filas del jugador por tipo.
    *
    * @param jugadorId - ID del jugador
    * @returns Estadísticas acumuladas por tipo y total de puntos

@@ -78,7 +78,7 @@ describe('EstadisticasService', () => {
       partidoId: 2,
       equipoId: 3,
       tipoEstadisticaId: 4,
-      cantidad: 3,
+      cantidad: 1,
     };
     const mockJugador = { id: 1, nombre: 'Lionel', apellidos: 'Messi' } as Jugador;
     const mockPartido = { id: 2 } as Partido;
@@ -90,15 +90,14 @@ describe('EstadisticasService', () => {
       puntos: 1,
     } as TipoEstadistica;
 
-    it('debe crear una fila nueva si no existe previamente', async () => {
+    beforeEach(() => {
       jugadorRepoMock.findOne.mockResolvedValue(mockJugador);
       partidoRepoMock.findOne.mockResolvedValue(mockPartido);
       equipoRepoMock.findOne.mockResolvedValue(mockEquipo);
       tipoEstadisticaRepoMock.findOne.mockResolvedValue(mockTipo);
+    });
 
-      // No existe previamente
-      estadisticaRepoMock.findOne.mockResolvedValue(null);
-
+    it('debe crear una fila nueva al registrar', async () => {
       const nuevaEntidad = {
         id: 100,
         jugador: mockJugador,
@@ -106,7 +105,7 @@ describe('EstadisticasService', () => {
         equipo: mockEquipo,
         tipoEstadistica: mockTipo,
         user: { id: userId },
-        cantidad: 3,
+        cantidad: 1,
       };
 
       estadisticaRepoMock.create.mockReturnValue(nuevaEntidad);
@@ -114,135 +113,162 @@ describe('EstadisticasService', () => {
 
       const result = await service.registrar(userId, dto);
 
-      expect(jugadorRepoMock.findOne).toHaveBeenCalledWith({ where: { id: 1 } });
-      expect(estadisticaRepoMock.create).toHaveBeenCalledWith(
-        expect.objectContaining({
-          jugador: mockJugador,
-          partido: mockPartido,
-          equipo: mockEquipo,
-          tipoEstadistica: mockTipo,
-          cantidad: 3,
-        }),
-      );
-      expect(estadisticaRepoMock.save).toHaveBeenCalled();
-      expect(result).toHaveProperty('id', 100);
-      expect(result).toHaveProperty('cantidad', 3);
-      expect((result as any).user).toBeUndefined();
-    });
-
-    it('con la misma combinación jugador+partido+tipo ACTUALIZA en vez de duplicar', async () => {
-      jugadorRepoMock.findOne.mockResolvedValue(mockJugador);
-      partidoRepoMock.findOne.mockResolvedValue(mockPartido);
-      equipoRepoMock.findOne.mockResolvedValue(mockEquipo);
-      tipoEstadisticaRepoMock.findOne.mockResolvedValue(mockTipo);
-
-      const filaExistente = {
-        id: 50,
+      expect(estadisticaRepoMock.create).toHaveBeenCalledWith({
         jugador: mockJugador,
         partido: mockPartido,
         equipo: mockEquipo,
         tipoEstadistica: mockTipo,
-        user: { id: 1 },
+        user: { id: userId },
+        cantidad: 1,
+      });
+      expect(estadisticaRepoMock.save).toHaveBeenCalled();
+      expect(result.id).toBe(100);
+      expect((result as any).user).toBeUndefined();
+    });
+
+    it('registrar() dos veces con el mismo jugador+partido+tipo crea DOS filas separadas (modelo de eventos)', async () => {
+      const fila1 = {
+        id: 100,
+        jugador: mockJugador,
+        partido: mockPartido,
+        equipo: mockEquipo,
+        tipoEstadistica: mockTipo,
+        user: { id: userId },
+        cantidad: 1,
+      };
+      const fila2 = {
+        id: 101,
+        jugador: mockJugador,
+        partido: mockPartido,
+        equipo: mockEquipo,
+        tipoEstadistica: mockTipo,
+        user: { id: userId },
         cantidad: 1,
       };
 
-      estadisticaRepoMock.findOne.mockResolvedValue(filaExistente);
-      estadisticaRepoMock.save.mockImplementation((ent) => Promise.resolve(ent));
+      // Primera llamada
+      estadisticaRepoMock.create.mockReturnValueOnce(fila1);
+      estadisticaRepoMock.save.mockResolvedValueOnce(fila1);
+      const res1 = await service.registrar(userId, dto);
 
-      const result = await service.registrar(userId, dto);
+      // Segunda llamada — SIEMPRE crea una nueva fila, no upsert
+      estadisticaRepoMock.create.mockReturnValueOnce(fila2);
+      estadisticaRepoMock.save.mockResolvedValueOnce(fila2);
+      const res2 = await service.registrar(userId, dto);
 
-      expect(estadisticaRepoMock.create).not.toHaveBeenCalled();
-      expect(filaExistente.cantidad).toBe(3);
-      expect(filaExistente.user).toEqual({ id: userId });
-      expect(result.id).toBe(50);
-      expect(result.cantidad).toBe(3);
-      expect((result as any).user).toBeUndefined();
+      expect(estadisticaRepoMock.create).toHaveBeenCalledTimes(2);
+      expect(estadisticaRepoMock.save).toHaveBeenCalledTimes(2);
+      expect(res1.id).toBe(100);
+      expect(res2.id).toBe(101);
+      // Son filas distintas
+      expect(res1.id).not.toBe(res2.id);
     });
 
     it('con jugador inexistente lanza NotFoundException', async () => {
       jugadorRepoMock.findOne.mockResolvedValue(null);
-
-      await expect(service.registrar(userId, dto)).rejects.toThrow(
-        NotFoundException,
-      );
-      expect(partidoRepoMock.findOne).not.toHaveBeenCalled();
+      await expect(service.registrar(userId, dto)).rejects.toThrow(NotFoundException);
+      expect(estadisticaRepoMock.create).not.toHaveBeenCalled();
     });
 
     it('con partido inexistente lanza NotFoundException', async () => {
-      jugadorRepoMock.findOne.mockResolvedValue(mockJugador);
       partidoRepoMock.findOne.mockResolvedValue(null);
-
-      await expect(service.registrar(userId, dto)).rejects.toThrow(
-        NotFoundException,
-      );
-      expect(equipoRepoMock.findOne).not.toHaveBeenCalled();
+      await expect(service.registrar(userId, dto)).rejects.toThrow(NotFoundException);
+      expect(estadisticaRepoMock.create).not.toHaveBeenCalled();
     });
 
     it('con equipo inexistente lanza NotFoundException', async () => {
-      jugadorRepoMock.findOne.mockResolvedValue(mockJugador);
-      partidoRepoMock.findOne.mockResolvedValue(mockPartido);
       equipoRepoMock.findOne.mockResolvedValue(null);
-
-      await expect(service.registrar(userId, dto)).rejects.toThrow(
-        NotFoundException,
-      );
-      expect(tipoEstadisticaRepoMock.findOne).not.toHaveBeenCalled();
+      await expect(service.registrar(userId, dto)).rejects.toThrow(NotFoundException);
+      expect(estadisticaRepoMock.create).not.toHaveBeenCalled();
     });
 
     it('con tipoEstadistica inexistente lanza NotFoundException', async () => {
-      jugadorRepoMock.findOne.mockResolvedValue(mockJugador);
-      partidoRepoMock.findOne.mockResolvedValue(mockPartido);
-      equipoRepoMock.findOne.mockResolvedValue(mockEquipo);
       tipoEstadisticaRepoMock.findOne.mockResolvedValue(null);
-
-      await expect(service.registrar(userId, dto)).rejects.toThrow(
-        NotFoundException,
-      );
+      await expect(service.registrar(userId, dto)).rejects.toThrow(NotFoundException);
+      expect(estadisticaRepoMock.create).not.toHaveBeenCalled();
     });
   });
 
   describe('eliminar', () => {
-    it('debe eliminar una estadística existente', async () => {
+    it('debe eliminar una estadística existente por ID', async () => {
       const mockEst = { id: 10 } as EstadisticaJugadorPartido;
       estadisticaRepoMock.findOne.mockResolvedValue(mockEst);
       estadisticaRepoMock.remove.mockResolvedValue(mockEst);
 
       const result = await service.eliminar(10);
       expect(estadisticaRepoMock.remove).toHaveBeenCalledWith(mockEst);
-      expect(result).toEqual({
-        message: 'Estadística eliminada correctamente',
-      });
+      expect(result).toEqual({ message: 'Estadística eliminada correctamente' });
     });
 
-    it('debe lanzar NotFoundException si no existe', async () => {
+    it('debe lanzar NotFoundException si no existe el ID', async () => {
       estadisticaRepoMock.findOne.mockResolvedValue(null);
       await expect(service.eliminar(999)).rejects.toThrow(NotFoundException);
     });
   });
 
+  describe('eliminarUltimoRegistro', () => {
+    it('elimina la fila más reciente cuando hay varias para la misma combinación', async () => {
+      const ultimaFila = {
+        id: 202,
+        jugador: { id: 1 },
+        partido: { id: 2 },
+        tipoEstadistica: { id: 4 },
+        createdAt: new Date('2026-08-15T05:00:00Z'),
+      } as unknown as EstadisticaJugadorPartido;
+
+      estadisticaRepoMock.findOne.mockResolvedValue(ultimaFila);
+      estadisticaRepoMock.remove.mockResolvedValue(ultimaFila);
+
+      const result = await service.eliminarUltimoRegistro(1, 2, 4);
+
+      expect(estadisticaRepoMock.findOne).toHaveBeenCalledWith({
+        where: {
+          jugador: { id: 1 },
+          partido: { id: 2 },
+          tipoEstadistica: { id: 4 },
+        },
+        order: { createdAt: 'DESC' },
+      });
+      expect(estadisticaRepoMock.remove).toHaveBeenCalledWith(ultimaFila);
+      expect(result).toEqual({
+        message: 'Último registro de estadística eliminado correctamente',
+      });
+    });
+
+    it('lanza NotFoundException si no hay ninguna fila para esa combinación', async () => {
+      estadisticaRepoMock.findOne.mockResolvedValue(null);
+
+      await expect(service.eliminarUltimoRegistro(1, 2, 99)).rejects.toThrow(
+        NotFoundException,
+      );
+      expect(estadisticaRepoMock.remove).not.toHaveBeenCalled();
+    });
+  });
+
   describe('porPartido', () => {
-    it('calcula correctamente el total de puntos sumando cantidad*puntos', async () => {
+    it('calcula correctamente el total de puntos sumando cantidad*puntos (modelo eventos: múltiples filas del mismo tipo)', async () => {
+      // Dos eventos de Triple (2 filas separadas de cantidad=1) + 1 evento de Doble
       const filas = [
         {
           id: 1,
           jugador: { id: 1, nombre: 'Carlos', apellidos: 'Alcaraz' },
           equipo: { id: 10, nombre: 'Equipo A' },
           tipoEstadistica: { id: 1, nombre: 'Triple', puntos: 3 },
-          cantidad: 2, // 2 * 3 = 6
+          cantidad: 1, // fila discreta
         },
         {
           id: 2,
           jugador: { id: 1, nombre: 'Carlos', apellidos: 'Alcaraz' },
           equipo: { id: 10, nombre: 'Equipo A' },
-          tipoEstadistica: { id: 2, nombre: 'Doble', puntos: 2 },
-          cantidad: 3, // 3 * 2 = 6
+          tipoEstadistica: { id: 1, nombre: 'Triple', puntos: 3 },
+          cantidad: 1, // segunda fila discreta mismo tipo
         },
         {
           id: 3,
-          jugador: { id: 2, nombre: 'Rafael', apellidos: 'Nadal' },
-          equipo: { id: 20, nombre: 'Equipo B' },
-          tipoEstadistica: { id: 1, nombre: 'Triple', puntos: 3 },
-          cantidad: 1, // 1 * 3 = 3
+          jugador: { id: 1, nombre: 'Carlos', apellidos: 'Alcaraz' },
+          equipo: { id: 10, nombre: 'Equipo A' },
+          tipoEstadistica: { id: 2, nombre: 'Doble', puntos: 2 },
+          cantidad: 1,
         },
       ];
 
@@ -250,19 +276,11 @@ describe('EstadisticasService', () => {
 
       const resultado = await service.porPartido(5);
 
-      expect(resultado).toHaveLength(2);
-
-      const jugador1 = resultado.find((r) => r.jugador.id === 1);
-      expect(jugador1).toBeDefined();
-      expect(jugador1?.totalPuntos).toBe(12); // 6 + 6
-      expect(jugador1?.estadisticas).toEqual([
-        { tipo: 'Triple', cantidad: 2, puntos: 3 },
-        { tipo: 'Doble', cantidad: 3, puntos: 2 },
-      ]);
-
-      const jugador2 = resultado.find((r) => r.jugador.id === 2);
-      expect(jugador2).toBeDefined();
-      expect(jugador2?.totalPuntos).toBe(3);
+      expect(resultado).toHaveLength(1);
+      const jugador1 = resultado[0];
+      // 1*3 + 1*3 + 1*2 = 8
+      expect(jugador1.totalPuntos).toBe(8);
+      expect(jugador1.estadisticas).toHaveLength(3); // 3 filas discretas
     });
   });
 
@@ -305,13 +323,8 @@ describe('EstadisticasService', () => {
 
       const res = await service.lideresPorTorneo(1);
 
-      expect(qbMock.where).toHaveBeenCalledWith('p.idTorneo = :torneoId', {
-        torneoId: 1,
-      });
-      expect(qbMock.orderBy).toHaveBeenCalledWith(
-        'SUM(e.cantidad * te.puntos)',
-        'DESC',
-      );
+      expect(qbMock.where).toHaveBeenCalledWith('p.idTorneo = :torneoId', { torneoId: 1 });
+      expect(qbMock.orderBy).toHaveBeenCalledWith('SUM(e.cantidad * te.puntos)', 'DESC');
       expect(qbMock.limit).toHaveBeenCalledWith(20);
       expect(res).toHaveLength(2);
       expect(res[0].jugador.nombre).toBe('Leo');
@@ -349,40 +362,23 @@ describe('EstadisticasService', () => {
 
       const res = await service.lideresPorTorneo(1, 3);
 
-      expect(qbMock.andWhere).toHaveBeenCalledWith(
-        'te.id = :tipoEstadisticaId',
-        { tipoEstadisticaId: 3 },
-      );
+      expect(qbMock.andWhere).toHaveBeenCalledWith('te.id = :tipoEstadisticaId', { tipoEstadisticaId: 3 });
       expect(qbMock.orderBy).toHaveBeenCalledWith('SUM(e.cantidad)', 'DESC');
       expect(res[0].total).toBe(15);
     });
   });
 
   describe('globalPorJugador', () => {
-    it('retorna las estadísticas acumuladas históricas del jugador', async () => {
-      const mockJugador = {
-        id: 7,
-        nombre: 'Kylian',
-        apellidos: 'Mbappé',
-      } as Jugador;
+    it('acumula correctamente múltiples filas del mismo tipo (modelo de eventos)', async () => {
+      const mockJugador = { id: 7, nombre: 'Kylian', apellidos: 'Mbappé' } as Jugador;
       jugadorRepoMock.findOne.mockResolvedValue(mockJugador);
 
+      // 3 filas discretas de 'Gol' (en vez de 1 fila con cantidad=3)
       const filas = [
-        {
-          id: 1,
-          tipoEstadistica: { id: 1, nombre: 'Gol', puntos: 1 },
-          cantidad: 5,
-        },
-        {
-          id: 2,
-          tipoEstadistica: { id: 1, nombre: 'Gol', puntos: 1 },
-          cantidad: 3,
-        },
-        {
-          id: 3,
-          tipoEstadistica: { id: 2, nombre: 'Asistencia', puntos: 1 },
-          cantidad: 4,
-        },
+        { id: 1, tipoEstadistica: { id: 1, nombre: 'Gol', puntos: 1 }, cantidad: 1 },
+        { id: 2, tipoEstadistica: { id: 1, nombre: 'Gol', puntos: 1 }, cantidad: 1 },
+        { id: 3, tipoEstadistica: { id: 1, nombre: 'Gol', puntos: 1 }, cantidad: 1 },
+        { id: 4, tipoEstadistica: { id: 2, nombre: 'Asistencia', puntos: 1 }, cantidad: 1 },
       ];
 
       estadisticaRepoMock.find.mockResolvedValue(filas);
@@ -390,18 +386,17 @@ describe('EstadisticasService', () => {
       const res = await service.globalPorJugador(7);
 
       expect(res.jugador.nombre).toBe('Kylian');
-      expect(res.totalPuntos).toBe(12); // (5+3)*1 + 4*1
+      // 3 goles*1 + 1 asistencia*1 = 4
+      expect(res.totalPuntos).toBe(4);
       expect(res.estadisticas).toEqual([
-        { tipo: 'Gol', cantidad: 8, puntos: 1 },
-        { tipo: 'Asistencia', cantidad: 4, puntos: 1 },
+        { tipo: 'Gol', cantidad: 3, puntos: 1 },
+        { tipo: 'Asistencia', cantidad: 1, puntos: 1 },
       ]);
     });
 
     it('lanza NotFoundException si el jugador no existe', async () => {
       jugadorRepoMock.findOne.mockResolvedValue(null);
-      await expect(service.globalPorJugador(999)).rejects.toThrow(
-        NotFoundException,
-      );
+      await expect(service.globalPorJugador(999)).rejects.toThrow(NotFoundException);
     });
   });
 });

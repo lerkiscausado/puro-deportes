@@ -6,7 +6,6 @@ import {
   UpdateDateColumn,
   ManyToOne,
   JoinColumn,
-  Unique,
 } from 'typeorm';
 import { Jugador } from '../jugadores/jugador.entity';
 import { Partido } from '../partidos/partido.entity';
@@ -16,10 +15,10 @@ import { User } from '../users/user.entity';
 
 /**
  * Entidad EstadisticaJugadorPartido - Representa la tabla 'estadisticas_jugador_partido' en la BD.
- * Registra los eventos estadísticos individuales (goles, faltas, puntos, etc.) de cada jugador por partido.
+ * Cada fila representa un evento/acción discreta (ej. cada tiro libre, cada gol) de un jugador en un partido.
+ * Se permiten múltiples filas con la misma combinación jugador+partido+tipo (modelo de eventos, no acumulado).
  */
 @Entity('estadisticas_jugador_partido')
-@Unique(['jugador', 'partido', 'tipoEstadistica'])
 export class EstadisticaJugadorPartido {
   /** Identificador único del registro estadístico */
   @PrimaryGeneratedColumn()

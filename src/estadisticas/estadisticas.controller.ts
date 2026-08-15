@@ -29,13 +29,14 @@ export class EstadisticasController {
   constructor(private readonly estadisticasService: EstadisticasService) {}
 
   /**
-   * Registra o actualiza la estadística de un jugador en un partido.
+   * Registra un nuevo evento estadístico discreto de un jugador en un partido.
+   * Crea siempre una fila nueva (modelo de eventos, no upsert).
    * Ruta: POST /estadisticas
    * Roles permitidos: ADMIN, MANAGER.
    *
    * @param req - Objeto request con payload JWT del usuario autenticado
    * @param dto - DTO con datos de la estadística
-   * @returns Registro guardado
+   * @returns Registro creado
    */
   @Roles(Role.ADMIN, Role.MANAGER)
   @Post()
@@ -58,6 +59,31 @@ export class EstadisticasController {
   @Delete(':id')
   async eliminar(@Param('id', ParseIntPipe) id: number) {
     return this.estadisticasService.eliminar(id);
+  }
+
+  /**
+   * Elimina el evento estadístico MÁS RECIENTE de un jugador en un partido para un tipo dado.
+   * Útil para deshacer el último tap/click durante el registro en tiempo real.
+   * Ruta: DELETE /estadisticas/ultimo/jugador/:jugadorId/partido/:partidoId/tipo/:tipoEstadisticaId
+   * Roles permitidos: ADMIN, MANAGER.
+   *
+   * @param jugadorId - ID del jugador
+   * @param partidoId - ID del partido
+   * @param tipoEstadisticaId - ID del tipo de estadística
+   * @returns Mensaje de confirmación
+   */
+  @Roles(Role.ADMIN, Role.MANAGER)
+  @Delete('ultimo/jugador/:jugadorId/partido/:partidoId/tipo/:tipoEstadisticaId')
+  async eliminarUltimoRegistro(
+    @Param('jugadorId', ParseIntPipe) jugadorId: number,
+    @Param('partidoId', ParseIntPipe) partidoId: number,
+    @Param('tipoEstadisticaId', ParseIntPipe) tipoEstadisticaId: number,
+  ) {
+    return this.estadisticasService.eliminarUltimoRegistro(
+      jugadorId,
+      partidoId,
+      tipoEstadisticaId,
+    );
   }
 
   /**
