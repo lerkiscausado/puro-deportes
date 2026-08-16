@@ -129,10 +129,7 @@ export class UsersService {
    * @throws BadRequestException si el token es inválido o ha expirado
    */
   async verifyEmail(token: string): Promise<{ message: string }> {
-    const tokenHash = crypto
-      .createHash('sha256')
-      .update(token)
-      .digest('hex');
+    const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
 
     const user = await this.usersRepository.findOne({
       where: {
@@ -166,9 +163,7 @@ export class UsersService {
    * @param email - Correo del usuario a verificar
    * @returns Mensaje genérico de éxito
    */
-  async resendVerificationEmail(
-    email: string,
-  ): Promise<{ message: string }> {
+  async resendVerificationEmail(email: string): Promise<{ message: string }> {
     const genericResponse = {
       message:
         'Si el correo está registrado y pendiente de verificación, se ha enviado un nuevo enlace.',
@@ -195,8 +190,7 @@ export class UsersService {
     await this.usersRepository.save(user);
 
     const frontendUrl =
-      this.configService.get<string>('FRONTEND_URL') ||
-      'http://localhost:3001';
+      this.configService.get<string>('FRONTEND_URL') || 'http://localhost:3001';
     const verificationUrl = `${frontendUrl}/verificar-correo?token=${verificationToken}`;
 
     await this.emailService.sendVerificationEmail(
@@ -242,8 +236,7 @@ export class UsersService {
     await this.usersRepository.save(user);
 
     const frontendUrl =
-      this.configService.get<string>('FRONTEND_URL') ||
-      'http://localhost:3001';
+      this.configService.get<string>('FRONTEND_URL') || 'http://localhost:3001';
     const resetUrl = `${frontendUrl}/restablecer-contrasena?token=${resetToken}`;
 
     await this.emailService.sendPasswordResetEmail(
@@ -267,10 +260,7 @@ export class UsersService {
     token: string,
     newPassword: string,
   ): Promise<{ message: string }> {
-    const tokenHash = crypto
-      .createHash('sha256')
-      .update(token)
-      .digest('hex');
+    const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
 
     const user = await this.usersRepository.findOne({
       where: {

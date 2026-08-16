@@ -8,6 +8,7 @@ import { Partido } from '../partidos/partido.entity';
 import { Equipo } from '../equipos/equipo.entity';
 import { TipoEstadistica } from '../tipos-estadistica/tipo-estadistica.entity';
 import { User } from '../users/user.entity';
+import { Planilla } from '../planillas/planilla.entity';
 import { EstadisticasService } from './estadisticas.service';
 import { EstadisticasController } from './estadisticas.controller';
 
@@ -23,6 +24,7 @@ import { EstadisticasController } from './estadisticas.controller';
       Equipo,
       TipoEstadistica,
       User,
+      Planilla,
     ]),
     JwtModule.registerAsync({
       imports: [ConfigModule],

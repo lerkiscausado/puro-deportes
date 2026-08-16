@@ -179,10 +179,7 @@ export class EquiposService {
     }
 
     // Mezcla las propiedades actualizadas
-    const equipoActualizado = this.equiposRepository.merge(
-      equipo,
-      restDto,
-    );
+    const equipoActualizado = this.equiposRepository.merge(equipo, restDto);
     equipoActualizado.foto = fotoActualizada;
 
     await this.equiposRepository.save(equipoActualizado);

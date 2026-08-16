@@ -208,9 +208,14 @@ describe('VisitasService', () => {
     });
 
     it('convierte correctamente los strings de la BD a números', async () => {
-      setupQbMocks(0, 0, 0, 0, [{ ruta: '/home', cantidad: '5' }], [
-        { dispositivo: 'movil', cantidad: '3' },
-      ]);
+      setupQbMocks(
+        0,
+        0,
+        0,
+        0,
+        [{ ruta: '/home', cantidad: '5' }],
+        [{ dispositivo: 'movil', cantidad: '3' }],
+      );
 
       const result = await service.obtenerEstadisticas();
 

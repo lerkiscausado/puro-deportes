@@ -18,6 +18,7 @@ import { JwtAuthGuard } from '../users/guards/jwt-auth.guard';
 import { RolesGuard } from '../users/guards/roles.guard';
 import { Roles } from '../users/decorators/roles.decorator';
 import { Role } from '../users/enums/role.enum';
+import { Public } from '../users/decorators/public.decorator';
 
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Controller('partidoperiodos')
@@ -37,6 +38,14 @@ export class PartidoPeriodosController {
   @Get()
   async findAll() {
     return this.service.findAll();
+  }
+
+  @Public()
+  @Get('partido/:partidoId/public')
+  async findPublicByPartido(
+    @Param('partidoId', ParseIntPipe) partidoId: number,
+  ) {
+    return this.service.findPublicByPartido(partidoId);
   }
 
   @Roles(Role.ADMIN, Role.MANAGER, Role.USER)

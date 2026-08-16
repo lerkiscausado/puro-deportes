@@ -19,7 +19,11 @@ import { EstadoPlanilla } from './enums/estado-planilla.enum';
  * Registra a un jugador en una planilla (roster) para un torneo y equipo específicos,
  * incluyendo el número de camiseta y el estado del registro.
  */
-@Index('IDX_planilla_torneo_equipo_camiseta', ['torneo', 'equipo', 'numeroCamiseta'], { unique: true })
+@Index(
+  'IDX_planilla_torneo_equipo_camiseta',
+  ['torneo', 'equipo', 'numeroCamiseta'],
+  { unique: true },
+)
 @Entity('planillas')
 export class Planilla {
   /** Identificador único de la planilla, generado automáticamente */

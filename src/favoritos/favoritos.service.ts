@@ -67,8 +67,8 @@ export class FavoritosService {
 
     // Crea el favorito usando referencias de FK (evita cargar objetos completos)
     const favorito = this.favoritosRepository.create({
-      user: { id: userId } as any,
-      torneo: { id: torneoId } as any,
+      user: { id: userId },
+      torneo: { id: torneoId },
     });
 
     try {

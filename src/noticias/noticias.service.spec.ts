@@ -151,9 +151,9 @@ describe('NoticiasService', () => {
     it('lanza NotFoundException si la noticia con ese slug no existe', async () => {
       noticiasRepositoryMock.findOne.mockResolvedValue(null);
 
-      await expect(service.findPublicBySlug('slug-inexistente')).rejects.toThrow(
-        NotFoundException,
-      );
+      await expect(
+        service.findPublicBySlug('slug-inexistente'),
+      ).rejects.toThrow(NotFoundException);
     });
   });
 });

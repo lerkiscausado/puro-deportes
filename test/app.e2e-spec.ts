@@ -21,7 +21,9 @@ describe('AppController (e2e)', () => {
     // Se aplica el mismo prefijo global que en main.ts para que los tests sean
     // coherentes con el comportamiento real del servidor.
     app.setGlobalPrefix('api');
-    app.useGlobalPipes(new ValidationPipe({ whitelist: true, transform: true }));
+    app.useGlobalPipes(
+      new ValidationPipe({ whitelist: true, transform: true }),
+    );
     await app.init();
   });
 
@@ -52,24 +54,40 @@ describe('AppController (e2e)', () => {
   });
 
   it('GET /api/torneos/:id/public → responde sin requerir JWT guard', async () => {
-    const response = await request(app.getHttpServer()).get('/api/torneos/999999/public');
+    const response = await request(app.getHttpServer()).get(
+      '/api/torneos/999999/public',
+    );
     expect(response.status).toBe(404);
   });
 
   it('GET /api/inscripciones/torneo/:torneoId/public → responde sin requerir JWT guard', async () => {
-    const response = await request(app.getHttpServer()).get('/api/inscripciones/torneo/1/public');
+    const response = await request(app.getHttpServer()).get(
+      '/api/inscripciones/torneo/1/public',
+    );
     expect(response.status).toBe(200);
     expect(Array.isArray(response.body)).toBe(true);
   });
 
   it('GET /api/partidos/torneo/:torneoId/public → responde sin requerir JWT guard', async () => {
-    const response = await request(app.getHttpServer()).get('/api/partidos/torneo/1/public');
+    const response = await request(app.getHttpServer()).get(
+      '/api/partidos/torneo/1/public',
+    );
     expect(response.status).toBe(200);
     expect(Array.isArray(response.body)).toBe(true);
   });
 
   it('GET /api/noticias/publica/:slug → responde sin requerir JWT guard (404 si no existe)', async () => {
-    const response = await request(app.getHttpServer()).get('/api/noticias/publica/slug-inexistente');
+    const response = await request(app.getHttpServer()).get(
+      '/api/noticias/publica/slug-inexistente',
+    );
     expect(response.status).toBe(404);
+  });
+
+  it('GET /api/partidoperiodos/partido/:partidoId/public → responde sin requerir JWT guard', async () => {
+    const response = await request(app.getHttpServer()).get(
+      '/api/partidoperiodos/partido/1/public',
+    );
+    expect(response.status).toBe(200);
+    expect(Array.isArray(response.body)).toBe(true);
   });
 });

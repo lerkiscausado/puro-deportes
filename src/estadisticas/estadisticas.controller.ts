@@ -73,7 +73,9 @@ export class EstadisticasController {
    * @returns Mensaje de confirmación
    */
   @Roles(Role.ADMIN, Role.MANAGER)
-  @Delete('ultimo/jugador/:jugadorId/partido/:partidoId/tipo/:tipoEstadisticaId')
+  @Delete(
+    'ultimo/jugador/:jugadorId/partido/:partidoId/tipo/:tipoEstadisticaId',
+  )
   async eliminarUltimoRegistro(
     @Param('jugadorId', ParseIntPipe) jugadorId: number,
     @Param('partidoId', ParseIntPipe) partidoId: number,
@@ -115,7 +117,9 @@ export class EstadisticasController {
     @Param('torneoId', ParseIntPipe) torneoId: number,
     @Query('tipoEstadisticaId') tipoEstadisticaId?: string,
   ) {
-    const tipoIdNum = tipoEstadisticaId ? parseInt(tipoEstadisticaId, 10) : undefined;
+    const tipoIdNum = tipoEstadisticaId
+      ? parseInt(tipoEstadisticaId, 10)
+      : undefined;
     return this.estadisticasService.lideresPorTorneo(torneoId, tipoIdNum);
   }
 

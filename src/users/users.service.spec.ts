@@ -187,7 +187,9 @@ describe('UsersService y CreateUserDto', () => {
       expect(emailServiceMock.sendVerificationEmail).toHaveBeenCalledWith(
         dto.email,
         dto.name,
-        expect.stringContaining('https://purodeporte.co/verificar-correo?token='),
+        expect.stringContaining(
+          'https://purodeporte.co/verificar-correo?token=',
+        ),
       );
 
       expect(result).not.toHaveProperty('password');
@@ -208,11 +210,9 @@ describe('UsersService y CreateUserDto', () => {
     it('debe convertir un QueryFailedError con ER_DUP_ENTRY en ConflictException (condición de carrera)', async () => {
       usersRepositoryMock.findOne.mockResolvedValue(null);
 
-      const dbDuplicateError = new QueryFailedError(
-        'INSERT INTO user...',
-        [],
-        { code: 'ER_DUP_ENTRY' } as any,
-      );
+      const dbDuplicateError = new QueryFailedError('INSERT INTO user...', [], {
+        code: 'ER_DUP_ENTRY',
+      } as any);
       usersRepositoryMock.save.mockRejectedValue(dbDuplicateError);
 
       await expect(service.register(dto)).rejects.toThrow(ConflictException);
@@ -240,7 +240,9 @@ describe('UsersService y CreateUserDto', () => {
 
       const response = await service.verifyEmail(rawToken);
 
-      expect(response.message).toBe('Correo electrónico verificado exitosamente');
+      expect(response.message).toBe(
+        'Correo electrónico verificado exitosamente',
+      );
       expect(usersRepositoryMock.save).toHaveBeenCalledWith(
         expect.objectContaining({
           emailVerified: true,
@@ -282,7 +284,9 @@ describe('UsersService y CreateUserDto', () => {
 
       // Caso 1: Email no existe
       usersRepositoryMock.findOne.mockResolvedValue(null);
-      const res1 = await service.resendVerificationEmail('noexiste@example.com');
+      const res1 = await service.resendVerificationEmail(
+        'noexiste@example.com',
+      );
       expect(res1.message).toBe(expectedMessage);
       expect(emailServiceMock.sendVerificationEmail).not.toHaveBeenCalled();
 
@@ -308,13 +312,17 @@ describe('UsersService y CreateUserDto', () => {
       usersRepositoryMock.findOne.mockResolvedValue(unverifiedUser);
       usersRepositoryMock.save.mockImplementation(async (u) => u);
 
-      const res3 = await service.resendVerificationEmail('pendiente@example.com');
+      const res3 = await service.resendVerificationEmail(
+        'pendiente@example.com',
+      );
       expect(res3.message).toBe(expectedMessage);
       expect(usersRepositoryMock.save).toHaveBeenCalled();
       expect(emailServiceMock.sendVerificationEmail).toHaveBeenCalledWith(
         'pendiente@example.com',
         'Carlos',
-        expect.stringContaining('https://purodeporte.co/verificar-correo?token='),
+        expect.stringContaining(
+          'https://purodeporte.co/verificar-correo?token=',
+        ),
       );
     });
   });
@@ -417,7 +425,9 @@ describe('UsersService y CreateUserDto', () => {
       expect(emailServiceMock.sendPasswordResetEmail).toHaveBeenCalledWith(
         'juan@example.com',
         'Juan Pérez',
-        expect.stringContaining('https://purodeporte.co/restablecer-contrasena?token='),
+        expect.stringContaining(
+          'https://purodeporte.co/restablecer-contrasena?token=',
+        ),
       );
     });
   });
@@ -698,9 +708,7 @@ describe('UsersService y CreateUserDto', () => {
 
       usersRepositoryMock.findOne.mockResolvedValue(mockAdmin);
 
-      await expect(
-        service.updateTipoUsuario(99, 'seguidor'),
-      ).rejects.toThrow(
+      await expect(service.updateTipoUsuario(99, 'seguidor')).rejects.toThrow(
         new BadRequestException(
           'Los administradores no pueden cambiar su tipo de usuario desde aquí',
         ),
@@ -718,4 +726,3 @@ describe('UsersService y CreateUserDto', () => {
     });
   });
 });
-

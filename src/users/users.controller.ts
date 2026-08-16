@@ -223,7 +223,11 @@ export class UsersController {
     @Body() updateProfileDto: UpdateProfileDto,
     @UploadedFile() file?: Express.Multer.File,
   ) {
-    return this.usersService.updateProfile(req.user.sub, updateProfileDto, file);
+    return this.usersService.updateProfile(
+      req.user.sub,
+      updateProfileDto,
+      file,
+    );
   }
 
   /**

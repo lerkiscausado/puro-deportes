@@ -1,9 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
-import {
-  ConflictException,
-  NotFoundException,
-} from '@nestjs/common';
+import { ConflictException, NotFoundException } from '@nestjs/common';
 import { QueryFailedError } from 'typeorm';
 import { FavoritosService } from './favoritos.service';
 import { Favorito } from './favorito.entity';
@@ -64,13 +61,22 @@ describe('FavoritosService', () => {
 
   describe('agregar', () => {
     it('agrega un favorito nuevo y retorna mensaje + id', async () => {
-      torneosRepositoryMock.findOne.mockResolvedValue({ id: 5, name: 'Torneo A' });
+      torneosRepositoryMock.findOne.mockResolvedValue({
+        id: 5,
+        name: 'Torneo A',
+      });
       favoritosRepositoryMock.findOne.mockResolvedValue(null); // no existe previo
-      favoritosRepositoryMock.save.mockResolvedValue({ id: 42, user: { id: 1 }, torneo: { id: 5 } });
+      favoritosRepositoryMock.save.mockResolvedValue({
+        id: 42,
+        user: { id: 1 },
+        torneo: { id: 5 },
+      });
 
       const result = await service.agregar(1, 5);
 
-      expect(torneosRepositoryMock.findOne).toHaveBeenCalledWith({ where: { id: 5 } });
+      expect(torneosRepositoryMock.findOne).toHaveBeenCalledWith({
+        where: { id: 5 },
+      });
       expect(favoritosRepositoryMock.findOne).toHaveBeenCalledWith({
         where: { user: { id: 1 }, torneo: { id: 5 } },
       });

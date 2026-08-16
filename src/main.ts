@@ -38,7 +38,7 @@ async function bootstrap() {
   } else {
     console.warn(
       '[CORS] La variable de entorno CORS_ORIGIN no está configurada. ' +
-      'Se usará el valor por defecto: http://localhost:3001',
+        'Se usará el valor por defecto: http://localhost:3001',
     );
     allowedOrigins = ['http://localhost:3001'];
   }
@@ -56,11 +56,12 @@ async function bootstrap() {
   // no lo afecta).
   // En producción (Docker) configurar UPLOADS_PATH con la ruta interna del
   // volumen montado (ej: /app/uploads) para que los archivos sean persistentes.
-  const uploadsPath = process.env.UPLOADS_PATH ?? join(process.cwd(), 'uploads');
+  const uploadsPath =
+    process.env.UPLOADS_PATH ?? join(process.cwd(), 'uploads');
   if (!process.env.UPLOADS_PATH) {
     console.warn(
       '[UPLOADS] La variable de entorno UPLOADS_PATH no está configurada. ' +
-      `Se usará el valor por defecto: ${uploadsPath}`,
+        `Se usará el valor por defecto: ${uploadsPath}`,
     );
   }
   app.useStaticAssets(uploadsPath, { prefix: '/uploads/' });

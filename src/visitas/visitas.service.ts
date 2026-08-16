@@ -51,7 +51,8 @@ export class VisitasService {
     if (!userAgent) {
       return TipoDispositivo.ESCRITORIO;
     }
-    const regexMovil = /Mobile|Android|iPhone|iPad|iPod|Windows Phone|BlackBerry/i;
+    const regexMovil =
+      /Mobile|Android|iPhone|iPad|iPod|Windows Phone|BlackBerry/i;
     return regexMovil.test(userAgent)
       ? TipoDispositivo.MOVIL
       : TipoDispositivo.ESCRITORIO;
@@ -99,39 +100,43 @@ export class VisitasService {
 
     // ── Contadores ────────────────────────────────────────────────────────────
 
-    const [totalVisitas, visitasHoy, visitasUltimos7Dias, visitasUltimos30Dias] =
-      await Promise.all([
-        // Total histórico
-        this.visitasRepository
-          .createQueryBuilder('v')
-          .select('COUNT(*)', 'total')
-          .getRawOne<{ total: string }>()
-          .then((r) => parseInt(r?.total ?? '0', 10)),
+    const [
+      totalVisitas,
+      visitasHoy,
+      visitasUltimos7Dias,
+      visitasUltimos30Dias,
+    ] = await Promise.all([
+      // Total histórico
+      this.visitasRepository
+        .createQueryBuilder('v')
+        .select('COUNT(*)', 'total')
+        .getRawOne<{ total: string }>()
+        .then((r) => parseInt(r?.total ?? '0', 10)),
 
-        // Hoy
-        this.visitasRepository
-          .createQueryBuilder('v')
-          .select('COUNT(*)', 'total')
-          .where('v.createdAt >= :fecha', { fecha: inicioHoy })
-          .getRawOne<{ total: string }>()
-          .then((r) => parseInt(r?.total ?? '0', 10)),
+      // Hoy
+      this.visitasRepository
+        .createQueryBuilder('v')
+        .select('COUNT(*)', 'total')
+        .where('v.createdAt >= :fecha', { fecha: inicioHoy })
+        .getRawOne<{ total: string }>()
+        .then((r) => parseInt(r?.total ?? '0', 10)),
 
-        // Últimos 7 días
-        this.visitasRepository
-          .createQueryBuilder('v')
-          .select('COUNT(*)', 'total')
-          .where('v.createdAt >= :fecha', { fecha: hace7Dias })
-          .getRawOne<{ total: string }>()
-          .then((r) => parseInt(r?.total ?? '0', 10)),
+      // Últimos 7 días
+      this.visitasRepository
+        .createQueryBuilder('v')
+        .select('COUNT(*)', 'total')
+        .where('v.createdAt >= :fecha', { fecha: hace7Dias })
+        .getRawOne<{ total: string }>()
+        .then((r) => parseInt(r?.total ?? '0', 10)),
 
-        // Últimos 30 días
-        this.visitasRepository
-          .createQueryBuilder('v')
-          .select('COUNT(*)', 'total')
-          .where('v.createdAt >= :fecha', { fecha: hace30Dias })
-          .getRawOne<{ total: string }>()
-          .then((r) => parseInt(r?.total ?? '0', 10)),
-      ]);
+      // Últimos 30 días
+      this.visitasRepository
+        .createQueryBuilder('v')
+        .select('COUNT(*)', 'total')
+        .where('v.createdAt >= :fecha', { fecha: hace30Dias })
+        .getRawOne<{ total: string }>()
+        .then((r) => parseInt(r?.total ?? '0', 10)),
+    ]);
 
     // ── Top 10 rutas más visitadas (últimos 30 días) ──────────────────────────
 

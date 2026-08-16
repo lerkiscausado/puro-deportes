@@ -7,6 +7,7 @@ import { Partido } from '../partidos/partido.entity';
 import { Equipo } from '../equipos/equipo.entity';
 import { TipoEstadistica } from '../tipos-estadistica/tipo-estadistica.entity';
 import { User } from '../users/user.entity';
+import { Planilla } from '../planillas/planilla.entity';
 import { RegistrarEstadisticaDto } from './dto/registrar-estadistica.dto';
 
 /**
@@ -28,6 +29,8 @@ export class EstadisticasService {
     private readonly equipoRepository: Repository<Equipo>,
     @InjectRepository(TipoEstadistica)
     private readonly tipoEstadisticaRepository: Repository<TipoEstadistica>,
+    @InjectRepository(Planilla)
+    private readonly planillaRepository: Repository<Planilla>,
   ) {}
 
   /**
@@ -65,7 +68,9 @@ export class EstadisticasService {
       where: { id: dto.equipoId },
     });
     if (!equipo) {
-      throw new NotFoundException(`Equipo con ID ${dto.equipoId} no encontrado`);
+      throw new NotFoundException(
+        `Equipo con ID ${dto.equipoId} no encontrado`,
+      );
     }
 
     const tipoEstadistica = await this.tipoEstadisticaRepository.findOne({
@@ -144,17 +149,20 @@ export class EstadisticasService {
     }
 
     await this.estadisticaRepository.remove(ultimo);
-    return { message: 'Último registro de estadística eliminado correctamente' };
+    return {
+      message: 'Último registro de estadística eliminado correctamente',
+    };
   }
 
   /**
    * Retorna las estadísticas de un partido específico agrupadas por jugador,
-   * incluyendo el total de puntos sumando (cantidad * tipoEstadistica.puntos).
+   * incluyendo el total de puntos sumando (cantidad * tipoEstadistica.puntos)
+   * y el número de camiseta obtenido desde la planilla.
    * Funciona correctamente tanto con el modelo acumulado como con el de eventos
    * discretos, ya que suma cantidad*puntos de todas las filas del jugador.
    *
    * @param partidoId - ID del partido
-   * @returns Array de jugadores con sus estadísticas y total de puntos
+   * @returns Array de jugadores con sus estadísticas, total de puntos y número de camiseta
    */
   async porPartido(partidoId: number) {
     const filas = await this.estadisticaRepository.find({
@@ -167,6 +175,7 @@ export class EstadisticasService {
       {
         jugador: { id: number; nombre: string; apellidos: string };
         equipo: { id: number; nombre: string };
+        numeroCamiseta: number | null;
         estadisticas: Array<{
           tipoEstadisticaId: number;
           tipo: string;
@@ -190,6 +199,7 @@ export class EstadisticasService {
             id: fila.equipo.id,
             nombre: fila.equipo.nombre,
           },
+          numeroCamiseta: null,
           estadisticas: [],
           totalPuntos: 0,
         });
@@ -205,6 +215,36 @@ export class EstadisticasService {
       });
       entrada.totalPuntos += fila.cantidad * puntosTipo;
     }
+
+    if (mapa.size === 0) {
+      return [];
+    }
+
+    const partido = await this.partidoRepository.findOne({
+      where: { id: partidoId },
+      relations: ['torneo'],
+    });
+    const torneoId = partido?.torneo?.id;
+
+    await Promise.all(
+      Array.from(mapa.values()).map(async (entrada) => {
+        const whereCondition: {
+          jugador: { id: number };
+          equipo: { id: number };
+          torneo?: { id: number };
+        } = {
+          jugador: { id: entrada.jugador.id },
+          equipo: { id: entrada.equipo.id },
+        };
+        if (torneoId) {
+          whereCondition.torneo = { id: torneoId };
+        }
+        const planilla = await this.planillaRepository.findOne({
+          where: whereCondition,
+        });
+        entrada.numeroCamiseta = planilla?.numeroCamiseta ?? null;
+      }),
+    );
 
     return Array.from(mapa.values());
   }
@@ -283,9 +323,7 @@ export class EstadisticasService {
       where: { id: jugadorId },
     });
     if (!jugador) {
-      throw new NotFoundException(
-        `Jugador con ID ${jugadorId} no encontrado`,
-      );
+      throw new NotFoundException(`Jugador con ID ${jugadorId} no encontrado`);
     }
 
     const filas = await this.estadisticaRepository.find({

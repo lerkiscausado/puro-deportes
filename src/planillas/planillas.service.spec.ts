@@ -166,7 +166,11 @@ describe('PlanillasService', () => {
       planillasRepoMock.findOne.mockResolvedValue(null);
       planillasRepoMock.create.mockReturnValue({});
 
-      const dbError: any = new QueryFailedError('query', [], new Error('Duplicate entry'));
+      const dbError: any = new QueryFailedError(
+        'query',
+        [],
+        new Error('Duplicate entry'),
+      );
       dbError.driverError = { code: 'ER_DUP_ENTRY' };
       planillasRepoMock.save.mockRejectedValue(dbError);
 
@@ -211,9 +215,7 @@ describe('PlanillasService', () => {
         return Promise.resolve(null);
       });
 
-      await expect(
-        service.update(id, { numeroCamiseta: 10 }),
-      ).rejects.toThrow(
+      await expect(service.update(id, { numeroCamiseta: 10 })).rejects.toThrow(
         new BadRequestException(
           'El número de camiseta 10 ya está asignado a "Luis Diaz" en el equipo "Los Halcones".',
         ),
@@ -235,7 +237,9 @@ describe('PlanillasService', () => {
       }));
       planillasRepoMock.save.mockResolvedValue(planillaExistente);
 
-      const res = await service.update(id, { estado: EstadoPlanilla.SUSPENDIDO });
+      const res = await service.update(id, {
+        estado: EstadoPlanilla.SUSPENDIDO,
+      });
 
       expect(res).toBeDefined();
       expect(planillasRepoMock.save).toHaveBeenCalled();
@@ -254,13 +258,15 @@ describe('PlanillasService', () => {
         ...changes,
       }));
 
-      const dbError: any = new QueryFailedError('query', [], new Error('Duplicate entry'));
+      const dbError: any = new QueryFailedError(
+        'query',
+        [],
+        new Error('Duplicate entry'),
+      );
       dbError.driverError = { code: 'ER_DUP_ENTRY' };
       planillasRepoMock.save.mockRejectedValue(dbError);
 
-      await expect(
-        service.update(id, { numeroCamiseta: 99 }),
-      ).rejects.toThrow(
+      await expect(service.update(id, { numeroCamiseta: 99 })).rejects.toThrow(
         new BadRequestException(
           'Ese número de camiseta ya fue asignado a otro jugador de este equipo, intenta con otro número.',
         ),

@@ -78,7 +78,12 @@ describe('EquiposService', () => {
 
     it('debe usar file.filename para el campo foto cuando se provee un archivo', async () => {
       const mockFile = { filename: 'foto-123456.png' } as Express.Multer.File;
-      const createdEquipo = { id: 1, ...dto, foto: 'foto-123456.png', user: mockUser } as Equipo;
+      const createdEquipo = {
+        id: 1,
+        ...dto,
+        foto: 'foto-123456.png',
+        user: mockUser,
+      } as Equipo;
 
       usersRepositoryMock.findOne.mockResolvedValue(mockUser);
       equiposRepositoryMock.create.mockReturnValue(createdEquipo);
@@ -87,7 +92,9 @@ describe('EquiposService', () => {
 
       const result = await service.create(dto, 10, mockFile);
 
-      expect(usersRepositoryMock.findOne).toHaveBeenCalledWith({ where: { id: 10 } });
+      expect(usersRepositoryMock.findOne).toHaveBeenCalledWith({
+        where: { id: 10 },
+      });
       expect(equiposRepositoryMock.create).toHaveBeenCalledWith({
         ...dto,
         foto: 'foto-123456.png',
@@ -97,7 +104,10 @@ describe('EquiposService', () => {
     });
 
     it('debe usar createEquipoDto.foto cuando no se suministra un archivo', async () => {
-      const dtoWithFoto: CreateEquipoDto = { ...dto, foto: 'escudo-manual.png' };
+      const dtoWithFoto: CreateEquipoDto = {
+        ...dto,
+        foto: 'escudo-manual.png',
+      };
       const createdEquipo = { id: 2, ...dtoWithFoto, user: mockUser } as Equipo;
 
       usersRepositoryMock.findOne.mockResolvedValue(mockUser);

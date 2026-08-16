@@ -123,7 +123,10 @@ describe('PartidosService', () => {
         },
       ];
 
-      partidosRepositoryMock.findAndCount.mockResolvedValue([mockProgramados, 12]);
+      partidosRepositoryMock.findAndCount.mockResolvedValue([
+        mockProgramados,
+        12,
+      ]);
 
       const result = (await service.findPublicProgramados(1, 10)) as {
         data: Partido[];
@@ -214,7 +217,10 @@ describe('PartidosService', () => {
         },
       ];
 
-      partidosRepositoryMock.findAndCount.mockResolvedValue([mockFinalizados, 15]);
+      partidosRepositoryMock.findAndCount.mockResolvedValue([
+        mockFinalizados,
+        15,
+      ]);
 
       const result = (await service.findPublicFinalizados(1, 10)) as {
         data: Partido[];

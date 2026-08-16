@@ -97,6 +97,20 @@ export class PartidoPeriodosService {
     });
   }
 
+  async findPublicByPartido(partidoId: number): Promise<PartidoPeriodo[]> {
+    return this.partidoperiodosRepository.find({
+      where: { partido: { id: partidoId } },
+      select: {
+        id: true,
+        nombrePeriodo: true,
+        tipoPeriodo: true,
+        scoreLocal: true,
+        scoreVisitante: true,
+      },
+      order: { id: 'ASC' },
+    });
+  }
+
   async update(
     id: number,
     updateDto: UpdatePartidoPeriodoDto,

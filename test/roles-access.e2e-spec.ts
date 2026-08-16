@@ -33,15 +33,27 @@ describe('Role Access Control (e2e)', () => {
 
     app = moduleFixture.createNestApplication();
     app.setGlobalPrefix('api');
-    app.useGlobalPipes(new ValidationPipe({ whitelist: true, transform: true }));
+    app.useGlobalPipes(
+      new ValidationPipe({ whitelist: true, transform: true }),
+    );
     await app.init();
 
     jwtService = app.get(JwtService);
 
     // Token con role=USER (seguidor)
-    userToken = jwtService.sign({ sub: 9999, email: 'user@test.co', name: 'User Test', role: Role.USER });
+    userToken = jwtService.sign({
+      sub: 9999,
+      email: 'user@test.co',
+      name: 'User Test',
+      role: Role.USER,
+    });
     // Token con role=MANAGER (organizador)
-    managerToken = jwtService.sign({ sub: 9998, email: 'manager@test.co', name: 'Manager Test', role: Role.MANAGER });
+    managerToken = jwtService.sign({
+      sub: 9998,
+      email: 'manager@test.co',
+      name: 'Manager Test',
+      role: Role.MANAGER,
+    });
   });
 
   afterAll(async () => {
@@ -55,7 +67,12 @@ describe('Role Access Control (e2e)', () => {
       return request(app.getHttpServer())
         .post('/api/torneos')
         .set('Authorization', `Bearer ${userToken}`)
-        .send({ nombre: 'Torneo Test', deporte: 'Fútbol', rama: 'Masculino', año: 2026 })
+        .send({
+          nombre: 'Torneo Test',
+          deporte: 'Fútbol',
+          rama: 'Masculino',
+          año: 2026,
+        })
         .expect(403);
     });
 
@@ -63,7 +80,12 @@ describe('Role Access Control (e2e)', () => {
       const res = await request(app.getHttpServer())
         .post('/api/torneos')
         .set('Authorization', `Bearer ${managerToken}`)
-        .send({ nombre: 'Torneo Test', deporte: 'Fútbol', rama: 'Masculino', año: 2026 });
+        .send({
+          nombre: 'Torneo Test',
+          deporte: 'Fútbol',
+          rama: 'Masculino',
+          año: 2026,
+        });
 
       // El guard de roles NO debe bloquear al MANAGER (no debe ser 403)
       expect(res.status).not.toBe(403);
@@ -128,8 +150,6 @@ describe('Role Access Control (e2e)', () => {
   });
 
   it('POST /api/uploads/logo sin token → 401', () => {
-    return request(app.getHttpServer())
-      .post('/api/uploads/logo')
-      .expect(401);
+    return request(app.getHttpServer()).post('/api/uploads/logo').expect(401);
   });
 });

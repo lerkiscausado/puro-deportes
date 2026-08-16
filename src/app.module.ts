@@ -101,4 +101,4 @@ import { EstadisticasModule } from './estadisticas/estadisticas.module';
     },
   ],
 })
-export class AppModule { }
+export class AppModule {}

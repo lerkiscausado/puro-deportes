@@ -36,7 +36,9 @@ describe('getUploadsPath', () => {
 
     expect(result).toBe(expectedPath);
     expect(fs.existsSync).toHaveBeenCalledWith(expectedPath);
-    expect(fs.mkdirSync).toHaveBeenCalledWith(expectedPath, { recursive: true });
+    expect(fs.mkdirSync).toHaveBeenCalledWith(expectedPath, {
+      recursive: true,
+    });
   });
 
   it('NO debe llamar a mkdirSync si el directorio YA existe', () => {
