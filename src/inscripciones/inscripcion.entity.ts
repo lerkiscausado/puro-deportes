@@ -91,6 +91,13 @@ export class Inscripcion {
   })
   estado: EstadoInscripcion;
 
+  /**
+   * Grupo de fase de grupos al que pertenece el equipo inscrito.
+   * Valores posibles: 'A', 'B', 'C', 'D'. Nullable.
+   */
+  @Column({ type: 'varchar', length: 10, nullable: true })
+  grupo: string | null;
+
   /** Fecha de creación de la inscripción (generada automáticamente) */
   @CreateDateColumn()
   createdAt: Date;

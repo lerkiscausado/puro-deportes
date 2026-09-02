@@ -227,6 +227,7 @@ export class InscripcionesService {
         puntosContra,
         diferencia,
         puntos,
+        grupo,
         equipo,
       } = insc;
 
@@ -240,6 +241,7 @@ export class InscripcionesService {
         puntosContra,
         diferencia,
         puntos,
+        grupo,
         equipo: equipo
           ? {
               id: equipo.id,

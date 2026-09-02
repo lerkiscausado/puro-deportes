@@ -1,4 +1,4 @@
-import { IsInt, IsNotEmpty } from 'class-validator';
+import { IsInt, IsNotEmpty, IsOptional, IsIn } from 'class-validator';
 import { Type } from 'class-transformer';
 
 /**
@@ -17,4 +17,9 @@ export class CreateInscripcionDto {
   @IsInt({ message: 'El ID del equipo debe ser un número entero.' })
   @IsNotEmpty({ message: 'El ID del equipo es requerido.' })
   idEquipo: number;
+
+  /** Grupo de fase de grupos (A, B, C o D). Opcional. */
+  @IsOptional()
+  @IsIn(['A', 'B', 'C', 'D'], { message: 'El grupo debe ser A, B, C o D.' })
+  grupo?: string;
 }

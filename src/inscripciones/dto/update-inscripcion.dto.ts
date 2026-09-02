@@ -1,4 +1,4 @@
-import { IsEnum, IsInt, IsOptional } from 'class-validator';
+import { IsEnum, IsIn, IsInt, IsOptional } from 'class-validator';
 import { Type } from 'class-transformer';
 import { EstadoInscripcion } from '../enums/estado-inscripcion.enum';
 
@@ -61,4 +61,9 @@ export class UpdateInscripcionDto {
     message: 'El estado debe ser Activo o Eliminado',
   })
   estado?: EstadoInscripcion;
+
+  /** Grupo de fase de grupos (A, B, C o D). Opcional. */
+  @IsOptional()
+  @IsIn(['A', 'B', 'C', 'D'], { message: 'El grupo debe ser A, B, C o D.' })
+  grupo?: string;
 }
