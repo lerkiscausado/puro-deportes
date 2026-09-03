@@ -71,6 +71,20 @@ export class Inscripcion {
   @Column({ type: 'int', default: 0 })
   puntosContra: number;
 
+  /**
+   * Total de puntos reales anotados (aplica a vóley: suma de puntos por set).
+   * Para otros deportes permanece en 0.
+   */
+  @Column({ type: 'int', default: 0 })
+  puntosAnotados: number;
+
+  /**
+   * Total de puntos reales recibidos (aplica a vóley: suma de puntos del rival por set).
+   * Para otros deportes permanece en 0.
+   */
+  @Column({ type: 'int', default: 0 })
+  puntosRecibidos: number;
+
   /** Diferencia de goles o puntos (puntosFavor - puntosContra) (por defecto 0) */
   @Column({ type: 'int', default: 0 })
   diferencia: number;

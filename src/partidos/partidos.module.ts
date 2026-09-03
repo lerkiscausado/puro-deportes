@@ -10,6 +10,7 @@ import { Torneo } from '../torneos/torneo.entity';
 import { Equipo } from '../equipos/equipo.entity';
 import { Escenario } from '../escenarios/escenario.entity';
 import { Inscripcion } from '../inscripciones/inscripcion.entity';
+import { PartidoPeriodo } from '../partidoperiodos/partidoperiodo.entity';
 
 /**
  * Módulo de Partidos.
@@ -24,6 +25,7 @@ import { Inscripcion } from '../inscripciones/inscripcion.entity';
       Equipo,
       Escenario,
       Inscripcion,
+      PartidoPeriodo,
     ]),
     JwtModule.registerAsync({
       imports: [ConfigModule],

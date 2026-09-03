@@ -18,6 +18,7 @@ import { Inscripcion } from '../inscripciones/inscripcion.entity';
 import { EstadoInscripcion } from '../inscripciones/enums/estado-inscripcion.enum';
 import { EstadoPartido } from './enums/estado-partido.enum';
 import { TipoJuego } from './enums/tipo-juego.enum';
+import { PartidoPeriodo } from '../partidoperiodos/partidoperiodo.entity';
 
 /**
  * Servicio de partidos.
@@ -49,6 +50,10 @@ export class PartidosService {
     /** Repositorio de TypeORM para operaciones en la tabla 'inscripciones' */
     @InjectRepository(Inscripcion)
     private readonly inscripcionesRepository: Repository<Inscripcion>,
+
+    /** Repositorio de TypeORM para consultar los periodos/sets de cada partido */
+    @InjectRepository(PartidoPeriodo)
+    private readonly partidoperiodosRepository: Repository<PartidoPeriodo>,
   ) {}
 
   /**
@@ -679,6 +684,8 @@ export class PartidosService {
       insc.puntosContra = 0;
       insc.diferencia = 0;
       insc.puntos = 0;
+      insc.puntosAnotados = 0;
+      insc.puntosRecibidos = 0;
     }
 
     // 2. Obtener el torneo para conocer la disciplina deportiva
@@ -715,6 +722,9 @@ export class PartidosService {
     });
 
     // 4. Acumular estadísticas
+    const esVoley =
+      dep.includes('voley') || dep.includes('voleibol');
+
     for (const partido of partidosFinalizados) {
       if (!partido.equipoLocal || !partido.equipoVisitante) continue;
 
@@ -733,12 +743,27 @@ export class PartidosService {
         localInsc.partidosJugados += 1;
         visitanteInsc.partidosJugados += 1;
 
-        // Goles/Puntos a favor y en contra
+        // Goles/Puntos a favor y en contra (sets en vóley)
         localInsc.puntosFavor += scoreLocal;
         localInsc.puntosContra += scoreVisitante;
 
         visitanteInsc.puntosFavor += scoreVisitante;
         visitanteInsc.puntosContra += scoreLocal;
+
+        // Para vóley: sumar los puntos reales de cada set desde PartidoPeriodo
+        if (esVoley) {
+          const periodos = await this.partidoperiodosRepository.find({
+            where: { partido: { id: partido.id } },
+          });
+
+          for (const periodo of periodos) {
+            localInsc.puntosAnotados += periodo.scoreLocal;
+            localInsc.puntosRecibidos += periodo.scoreVisitante;
+
+            visitanteInsc.puntosAnotados += periodo.scoreVisitante;
+            visitanteInsc.puntosRecibidos += periodo.scoreLocal;
+          }
+        }
 
         // Ganador / Perdedor / Empate
         if (scoreLocal > scoreVisitante) {
