@@ -21,6 +21,7 @@ import { FavoritosModule } from './favoritos/favoritos.module';
 import { VisitasModule } from './visitas/visitas.module';
 import { TiposEstadisticaModule } from './tipos-estadistica/tipos-estadistica.module';
 import { EstadisticasModule } from './estadisticas/estadisticas.module';
+import { PublicidadModule } from './publicidad/publicidad.module';
 
 @Module({
   imports: [
@@ -89,6 +90,7 @@ import { EstadisticasModule } from './estadisticas/estadisticas.module';
     VisitasModule,
     TiposEstadisticaModule,
     EstadisticasModule,
+    PublicidadModule,
   ],
   controllers: [AppController],
   providers: [

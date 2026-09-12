@@ -90,4 +90,18 @@ describe('AppController (e2e)', () => {
     expect(response.status).toBe(200);
     expect(Array.isArray(response.body)).toBe(true);
   });
+
+  it('GET /api/publicidad/vigente/public → responde sin requerir JWT guard y retorna un array', async () => {
+    const response = await request(app.getHttpServer()).get(
+      '/api/publicidad/vigente/public',
+    );
+    expect(response.status).toBe(200);
+    expect(Array.isArray(response.body)).toBe(true);
+    // Verificar que ningún item exponga fechaInicio, fechaFin o user
+    for (const item of response.body) {
+      expect(item).not.toHaveProperty('fechaInicio');
+      expect(item).not.toHaveProperty('fechaFin');
+      expect(item).not.toHaveProperty('user');
+    }
+  });
 });
