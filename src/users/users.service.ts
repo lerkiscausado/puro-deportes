@@ -19,6 +19,7 @@ import { UpdateProfileDto } from './dto/update-profile.dto';
 import { Role } from './enums/role.enum';
 import { EmailService } from '../email/email.service';
 import { getUploadsPath } from '../common/utils/uploads-path.util';
+import { VERSION_POLITICA } from '../common/legal.constants';
 
 /**
  * Servicio de usuarios.
@@ -82,8 +83,13 @@ export class UsersService {
       createUserDto.tipoUsuario === 'organizador' ? Role.MANAGER : Role.USER;
 
     // Crea la instancia del usuario con la contraseña hasheada y datos de verificación
+    // aceptaPolitica no es columna: se persiste la evidencia de aceptación
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { aceptaPolitica, ...userData } = createUserDto;
     const user = this.usersRepository.create({
-      ...createUserDto,
+      ...userData,
+      aceptoPoliticaAt: new Date(),
+      versionPolitica: VERSION_POLITICA,
       password: hashedPassword,
       role,
       emailVerified: false,

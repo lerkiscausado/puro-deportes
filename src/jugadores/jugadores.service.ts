@@ -8,6 +8,7 @@ import { Repository } from 'typeorm';
 import { Jugador } from './jugador.entity';
 import { CreateJugadorDto } from './dto/create-jugador.dto';
 import { UpdateJugadorDto } from './dto/update-jugador.dto';
+import { EDAD_MAYORIA, VERSION_POLITICA } from '../common/legal.constants';
 
 /**
  * Servicio de jugadores.
@@ -25,9 +26,13 @@ export class JugadoresService {
    * Crea un nuevo jugador en la base de datos.
    *
    * @param createJugadorDto - Datos para la creación del jugador
+   * @param userId - Usuario autenticado que declara la autorización
    * @returns El jugador creado y guardado
    */
-  async create(createJugadorDto: CreateJugadorDto): Promise<Jugador> {
+  async create(
+    createJugadorDto: CreateJugadorDto,
+    userId?: number,
+  ): Promise<Jugador> {
     if (createJugadorDto.identificacion) {
       const existing = await this.jugadoresRepository.findOne({
         where: { identificacion: createJugadorDto.identificacion },
@@ -39,8 +44,54 @@ export class JugadoresService {
       }
     }
 
-    const jugador = this.jugadoresRepository.create(createJugadorDto);
+    const esMenor =
+      this.calcularEdad(createJugadorDto.fechaNacimiento) < EDAD_MAYORIA;
+    const nombreRep = createJugadorDto.representanteNombre?.trim();
+    const docRep = createJugadorDto.representanteDocumento?.trim();
+    const parentesco = createJugadorDto.representanteParentesco?.trim();
+
+    if (esMenor) {
+      if (
+        !nombreRep ||
+        !docRep ||
+        !parentesco ||
+        createJugadorDto.autorizacionRepresentante !== true
+      ) {
+        throw new BadRequestException(
+          'Para jugadores menores de 18 años se requiere la autorización de su representante legal: nombre, documento, parentesco y confirmación.',
+        );
+      }
+    }
+
+    const jugador = this.jugadoresRepository.create({
+      ...createJugadorDto,
+      autorizacionTratamiento: true,
+      autorizacionAt: new Date(),
+      autorizacionPorUserId: userId ?? null,
+      versionPolitica: VERSION_POLITICA,
+      esMenorAlRegistrar: esMenor,
+      representanteNombre: esMenor ? nombreRep : null,
+      representanteDocumento: esMenor ? docRep : null,
+      representanteParentesco: esMenor ? parentesco : null,
+      autorizacionRepresentante: esMenor,
+    });
     return this.jugadoresRepository.save(jugador);
+  }
+
+  /** Calcula los años cumplidos a una fecha YYYY-MM-DD (zona America/Bogota). */
+  private calcularEdad(fechaNacimiento: string): number {
+    const [y, m, d] = fechaNacimiento.slice(0, 10).split('-').map(Number);
+    const hoy = new Date(
+      new Date().toLocaleString('en-US', { timeZone: 'America/Bogota' }),
+    );
+    let edad = hoy.getFullYear() - y;
+    if (
+      hoy.getMonth() + 1 < m ||
+      (hoy.getMonth() + 1 === m && hoy.getDate() < d)
+    ) {
+      edad--;
+    }
+    return edad;
   }
 
   /**

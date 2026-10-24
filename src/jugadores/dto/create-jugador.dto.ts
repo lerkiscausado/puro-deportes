@@ -1,10 +1,13 @@
 import {
+  Equals,
+  IsBoolean,
   IsDateString,
   IsEnum,
   IsNotEmpty,
   IsNumber,
   IsOptional,
   IsString,
+  MaxLength,
 } from 'class-validator';
 import { Genero } from '../../users/enums/genero.enum';
 import { EstadoJugador } from '../enums/estado-jugador.enum';
@@ -61,4 +64,32 @@ export class CreateJugadorDto {
     message: 'El estado debe ser uno de los siguientes: Activo o Suspendido.',
   })
   estado?: EstadoJugador;
+
+  /** El organizador declara contar con la autorización del titular */
+  @IsBoolean()
+  @Equals(true, {
+    message:
+      'Debes confirmar que cuentas con la autorización del titular para el tratamiento de sus datos.',
+  })
+  autorizacionTratamiento: boolean;
+
+  /** Datos del representante legal (obligatorios si el jugador es menor de 18 años) */
+  @IsOptional()
+  @IsString()
+  @MaxLength(150)
+  representanteNombre?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(50)
+  representanteDocumento?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(50)
+  representanteParentesco?: string;
+
+  @IsOptional()
+  @IsBoolean()
+  autorizacionRepresentante?: boolean;
 }

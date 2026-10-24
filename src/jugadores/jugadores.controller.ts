@@ -8,6 +8,7 @@ import {
   Patch,
   Post,
   Query,
+  Req,
   UseGuards,
 } from '@nestjs/common';
 import { JugadoresService } from './jugadores.service';
@@ -17,6 +18,7 @@ import { JwtAuthGuard } from '../users/guards/jwt-auth.guard';
 import { RolesGuard } from '../users/guards/roles.guard';
 import { Roles } from '../users/decorators/roles.decorator';
 import { Role } from '../users/enums/role.enum';
+import type { RequestWithUser } from '../common/interfaces/request-with-user.interface';
 
 /**
  * Controlador de jugadores.
@@ -38,8 +40,11 @@ export class JugadoresController {
    */
   @Roles(Role.ADMIN, Role.MANAGER)
   @Post()
-  async create(@Body() createJugadorDto: CreateJugadorDto) {
-    return this.jugadoresService.create(createJugadorDto);
+  async create(
+    @Body() createJugadorDto: CreateJugadorDto,
+    @Req() req: RequestWithUser,
+  ) {
+    return this.jugadoresService.create(createJugadorDto, req.user.sub);
   }
 
   /**

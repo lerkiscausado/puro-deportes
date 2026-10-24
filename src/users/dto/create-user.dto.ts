@@ -1,5 +1,7 @@
 import { Type } from 'class-transformer';
 import {
+  Equals,
+  IsBoolean,
   IsDate,
   IsEmail,
   IsEnum,
@@ -80,4 +82,19 @@ export class CreateUserDto {
     message: 'El tipo de usuario debe ser "organizador" o "seguidor".',
   })
   tipoUsuario?: 'organizador' | 'seguidor';
+
+  /**
+   * Aceptación de la Política de Tratamiento de Datos Personales y de los
+   * Términos y Condiciones. Debe ser true. No se persiste como columna:
+   * se guarda la evidencia (aceptoPoliticaAt y versionPolitica).
+   */
+  @IsBoolean({
+    message:
+      'Debes aceptar la Política de Tratamiento de Datos y los Términos y Condiciones.',
+  })
+  @Equals(true, {
+    message:
+      'Debes aceptar la Política de Tratamiento de Datos y los Términos y Condiciones.',
+  })
+  aceptaPolitica: boolean;
 }

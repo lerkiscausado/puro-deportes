@@ -57,6 +57,39 @@ export class Jugador {
   })
   estado: EstadoJugador;
 
+  /** El organizador declaró contar con la autorización del titular (Ley 1581/2012) */
+  @Column({ type: 'tinyint', width: 1, default: 0 })
+  autorizacionTratamiento: boolean;
+
+  /** Momento en que se registró la autorización */
+  @Column({ type: 'datetime', nullable: true })
+  autorizacionAt: Date | null;
+
+  /** Usuario (organizador) que declaró la autorización */
+  @Column({ type: 'int', nullable: true })
+  autorizacionPorUserId: number | null;
+
+  /** Versión de la política vigente al momento de la autorización */
+  @Column({ type: 'varchar', length: 20, nullable: true })
+  versionPolitica: string | null;
+
+  /** Si el jugador era menor de 18 años al registrarlo */
+  @Column({ type: 'tinyint', width: 1, default: 0 })
+  esMenorAlRegistrar: boolean;
+
+  @Column({ type: 'varchar', length: 150, nullable: true })
+  representanteNombre: string | null;
+
+  @Column({ type: 'varchar', length: 50, nullable: true })
+  representanteDocumento: string | null;
+
+  @Column({ type: 'varchar', length: 50, nullable: true })
+  representanteParentesco: string | null;
+
+  /** El representante legal autorizó el tratamiento de datos del menor */
+  @Column({ type: 'tinyint', width: 1, default: 0 })
+  autorizacionRepresentante: boolean;
+
   /** Fecha de creación del registro (generada automáticamente por TypeORM) */
   @CreateDateColumn()
   createdAt: Date;

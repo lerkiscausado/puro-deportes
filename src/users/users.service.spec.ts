@@ -110,6 +110,7 @@ describe('UsersService y CreateUserDto', () => {
       phone: '+573001234567',
       password: 'Password123!',
       name: 'Juan Pérez',
+      aceptaPolitica: true,
     };
 
     it('debe aceptar datos válidos', async () => {
@@ -158,6 +159,7 @@ describe('UsersService y CreateUserDto', () => {
       phone: '+573001234567',
       password: 'Password123!',
       name: 'Juan Pérez',
+      aceptaPolitica: true,
     };
 
     it('debe registrar un usuario, guardar el hash del token (no el token plano) y llamar a emailService.sendVerificationEmail', async () => {
@@ -176,6 +178,8 @@ describe('UsersService y CreateUserDto', () => {
         expect.objectContaining({
           email: dto.email,
           emailVerified: false,
+          aceptoPoliticaAt: expect.any(Date),
+          versionPolitica: expect.any(String),
           emailVerificationTokenHash: expect.any(String),
           emailVerificationTokenExpiresAt: expect.any(Date),
         }),
@@ -614,6 +618,7 @@ describe('UsersService y CreateUserDto', () => {
       phone: '+573001234567',
       password: 'Password123!',
       name: 'Organizador Test',
+      aceptaPolitica: true,
     };
 
     it('con tipoUsuario="organizador" debe guardar role=MANAGER', async () => {

@@ -84,6 +84,14 @@ export class User {
   passwordResetTokenExpiresAt: Date | null;
 
   /** Fecha de creación del registro (generada automáticamente por TypeORM) */
+  /** Fecha en que el usuario aceptó la política de datos y los términos */
+  @Column({ type: 'datetime', nullable: true })
+  aceptoPoliticaAt: Date | null;
+
+  /** Versión de la política/términos aceptada */
+  @Column({ type: 'varchar', length: 20, nullable: true })
+  versionPolitica: string | null;
+
   @CreateDateColumn()
   createdAt: Date;
 
